@@ -58,7 +58,7 @@ const LocationPin: React.FC = () => {
 
         <div className="flex justify-center space-x-6 pointer-events-auto">
           <Link
-            href="/report"
+            href="/itinerary"
             className="bg-emerald-600 text-white font-bold py-4 px-8 rounded-full hover:bg-emerald-700 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
           >
             Plan Your Itinerary
