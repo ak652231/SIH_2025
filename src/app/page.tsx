@@ -8,7 +8,7 @@ import { Montserrat, Poppins } from "next/font/google";
 import ContactHelpCenter from "../components/ContactHelpCenter";
 import Footer from "../components/Footer";
 import Navbar from "@/components/navbar";
-import UserTypeModal from "../components/UserTypeModal"; // ✅ import modal
+import UserTypeModal from "@/components/UserTypeModal";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -28,11 +28,9 @@ export default function Home() {
   const servicesRef = useRef<HTMLDivElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // ✅ modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    // ✅ check localStorage on first load
     const hasSelected = localStorage.getItem("userTypeSelected");
     if (!hasSelected) {
       setIsModalOpen(true);
