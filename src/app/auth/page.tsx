@@ -1,0 +1,605 @@
+"use client"
+
+import { useState, useRef } from "react"
+import { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, signInWithCredential } from "firebase/auth"
+import { doc, setDoc } from "firebase/firestore"
+import { auth, db } from "../../lib/firebase"
+import { MapPin, Phone, User, Store, Navigation, Mountain, Camera, Compass } from "lucide-react"
+
+const AuthPage = () => {
+  const [isSignUp, setIsSignUp] = useState(true)
+  const [userType, setUserType] = useState("vendor") // 'vendor' or 'tourguide'
+  const [isLoading, setIsLoading] = useState(false)
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [isLocationLoading, setIsLocationLoading] = useState(false)
+  const [showOtpInput, setShowOtpInput] = useState(false)
+  const [verificationId, setVerificationId] = useState("")
+  const [otp, setOtp] = useState("")
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState(null)
+  const suggestionRef = useRef(null)
+  const searchTimeoutRef = useRef(null)
+
+  const [formData, setFormData] = useState({
+    phone: "",
+    name: "",
+    shopName: "",
+    shopLocation: "",
+    shopAddress: "",
+    lat: null,
+    lng: null,
+  })
+
+  const [errors, setErrors] = useState({})
+
+  const fetchFromNominatim = async (query) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + " Jharkhand India")}&addressdetails=1&limit=5&countrycodes=in`,
+        {
+          headers: {
+            "Accept-Language": "en",
+            "User-Agent": "JharkhandTourApp/1.0",
+          },
+        },
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        return data.map((item) => ({
+          id: `nom-${item.place_id}`,
+          name: item.display_name,
+          shortName: item.display_name.split(",")[0],
+          source: "nominatim",
+          lat: Number.parseFloat(item.lat),
+          lng: Number.parseFloat(item.lon),
+        }))
+      }
+      return []
+    } catch (error) {
+      console.error("Nominatim error:", error)
+      return []
+    }
+  }
+
+  const fetchLocationSuggestions = async (query) => {
+    setIsLocationLoading(true)
+    try {
+      const results = await fetchFromNominatim(query)
+      setSuggestions(results)
+      setShowSuggestions(results.length > 0)
+    } catch (error) {
+      console.error("Error fetching location suggestions:", error)
+    } finally {
+      setIsLocationLoading(false)
+    }
+  }
+
+  const handleLocationChange = (e) => {
+    const { value } = e.target
+    setFormData({ ...formData, shopLocation: value })
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    if (value.trim().length >= 2) {
+      setIsLocationLoading(true)
+      searchTimeoutRef.current = setTimeout(() => {
+        fetchLocationSuggestions(value)
+      }, 300)
+    } else {
+      setSuggestions([])
+      setShowSuggestions(false)
+      setIsLocationLoading(false)
+    }
+  }
+
+  const handleSuggestionClick = (suggestion) => {
+    setFormData({
+      ...formData,
+      shopLocation: suggestion.name,
+      lat: suggestion.lat,
+      lng: suggestion.lng,
+    })
+    setSelectedLocation(suggestion)
+    setShowSuggestions(false)
+  }
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      setIsLocationLoading(true)
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+              {
+                headers: {
+                  "Accept-Language": "en",
+                  "User-Agent": "JharkhandTourApp/1.0",
+                },
+              },
+            )
+
+            if (response.ok) {
+              const data = await response.json()
+              const locationName = data.display_name
+              setFormData({
+                ...formData,
+                shopLocation: locationName,
+                lat: latitude,
+                lng: longitude,
+              })
+              setSelectedLocation({
+                name: locationName,
+                lat: latitude,
+                lng: longitude,
+              })
+            }
+          } catch (error) {
+            console.error("Error getting location name:", error)
+          } finally {
+            setIsLocationLoading(false)
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error)
+          setIsLocationLoading(false)
+        },
+      )
+    }
+  }
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" })
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors = {}
+
+    if (!formData.phone) newErrors.phone = "Phone number is required"
+    if (formData.phone && !/^\+91[6-9]\d{9}$/.test(formData.phone)) {
+      newErrors.phone = "Please enter a valid Indian phone number (+91XXXXXXXXXX)"
+    }
+
+    if (isSignUp) {
+      if (!formData.name) newErrors.name = "Name is required"
+
+      if (userType === "vendor") {
+        if (!formData.shopName) newErrors.shopName = "Shop name is required"
+        if (!formData.shopLocation) newErrors.shopLocation = "Shop location is required"
+        if (!formData.shopAddress) newErrors.shopAddress = "Shop address is required"
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const setupRecaptcha = () => {
+    if (!recaptchaVerifier) {
+      const verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        callback: () => {
+          console.log("[v0] reCAPTCHA solved")
+        },
+      })
+      setRecaptchaVerifier(verifier)
+      return verifier
+    }
+    return recaptchaVerifier
+  }
+
+  const sendOtp = async () => {
+    if (!validateForm()) return
+
+    setIsLoading(true)
+    try {
+      const verifier = setupRecaptcha()
+      const confirmationResult = await signInWithPhoneNumber(auth, formData.phone, verifier)
+      setVerificationId(confirmationResult.verificationId)
+      setShowOtpInput(true)
+      console.log("[v0] OTP sent successfully")
+    } catch (error) {
+      console.error("Error sending OTP:", error)
+      alert("Error sending OTP: " + error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const verifyOtp = async () => {
+    if (!otp || otp.length !== 6) {
+      setErrors({ ...errors, otp: "Please enter a valid 6-digit OTP" })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const credential = PhoneAuthProvider.credential(verificationId, otp)
+      const userCredential = await signInWithCredential(auth, credential)
+      const user = userCredential.user
+
+      if (isSignUp) {
+        const userData = {
+          uid: user.uid,
+          phone: formData.phone,
+          name: formData.name,
+          userType: userType, // Added userType field
+          createdAt: new Date().toISOString(),
+        }
+
+        if (userType === "vendor") {
+          userData.shopName = formData.shopName
+          userData.shopLocation = formData.shopLocation
+          userData.shopAddress = formData.shopAddress
+          userData.lat = formData.lat
+          userData.lng = formData.lng
+        }
+
+        await setDoc(doc(db, "users", user.uid), userData)
+        alert("Account created successfully!")
+      } else {
+        alert("Signed in successfully!")
+      }
+
+      // Reset form
+      setShowOtpInput(false)
+      setOtp("")
+      setVerificationId("")
+    } catch (error) {
+      console.error("Error verifying OTP:", error)
+      alert("Invalid OTP. Please try again.")
+      setErrors({ ...errors, otp: "Invalid OTP" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (showOtpInput) {
+      await verifyOtp()
+    } else {
+      await sendOtp()
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full opacity-20 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-teal-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
+        <Mountain className="absolute top-20 right-20 w-16 h-16 text-emerald-300 opacity-30" />
+        <Camera className="absolute bottom-20 left-20 w-12 h-12 text-teal-300 opacity-30" />
+        <Compass className="absolute top-1/2 left-10 w-14 h-14 text-emerald-400 opacity-20" />
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full mb-4 shadow-lg">
+              <MapPin className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-emerald-800 mb-2">Explore Jharkhand</h1>
+            <p className="text-emerald-600">{isSignUp ? "Join our travel community" : "Welcome back, explorer!"}</p>
+          </div>
+
+          {/* Auth Form */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-emerald-100">
+            {/* Toggle Sign Up / Sign In */}
+            <div className="flex bg-emerald-50 rounded-lg p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(true)}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  isSignUp ? "bg-emerald-600 text-white shadow-sm" : "text-emerald-600 hover:text-emerald-700"
+                }`}
+              >
+                Sign Up
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSignUp(false)}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  !isSignUp ? "bg-emerald-600 text-white shadow-sm" : "text-emerald-600 hover:text-emerald-700"
+                }`}
+              >
+                Sign In
+              </button>
+            </div>
+
+            {/* User Type Selection (only for sign up) */}
+            {isSignUp && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-emerald-700 mb-2">I am a:</label>
+                <div className="flex bg-emerald-50 rounded-lg p-1">
+                  <button
+                    type="button"
+                    onClick={() => setUserType("vendor")}
+                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                      userType === "vendor"
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "text-emerald-600 hover:text-emerald-700"
+                    }`}
+                  >
+                    <Store className="w-4 h-4" />
+                    Vendor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUserType("tourguide")}
+                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                      userType === "tourguide"
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "text-emerald-600 hover:text-emerald-700"
+                    }`}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Tour Guide
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-emerald-700 mb-1">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
+                      errors.phone ? "border-red-500" : "border-emerald-200"
+                    }`}
+                    placeholder="+91XXXXXXXXXX"
+                    disabled={showOtpInput}
+                  />
+                </div>
+                {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+              </div>
+
+              {showOtpInput && (
+                <div>
+                  <label className="block text-sm font-medium text-emerald-700 mb-1">Enter OTP</label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    maxLength={6}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors text-center text-lg tracking-widest ${
+                      errors.otp ? "border-red-500" : "border-emerald-200"
+                    }`}
+                    placeholder="000000"
+                  />
+                  {errors.otp && <p className="mt-1 text-sm text-red-600">{errors.otp}</p>}
+                  <p className="mt-1 text-sm text-emerald-600">
+                    OTP sent to {formData.phone}.
+                    <button
+                      type="button"
+                      onClick={() => setShowOtpInput(false)}
+                      className="ml-1 text-emerald-700 underline"
+                    >
+                      Change number?
+                    </button>
+                  </p>
+                </div>
+              )}
+
+              {/* Sign Up Fields */}
+              {isSignUp && !showOtpInput && (
+                <>
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-emerald-700 mb-1">Full Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
+                          errors.name ? "border-red-500" : "border-emerald-200"
+                        }`}
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                    {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                  </div>
+
+
+                  {/* Vendor-specific fields */}
+                  {userType === "vendor" && (
+                    <>
+                      {/* Shop Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Shop Name</label>
+                        <div className="relative">
+                          <Store className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                          <input
+                            type="text"
+                            name="shopName"
+                            value={formData.shopName}
+                            onChange={handleInputChange}
+                            className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
+                              errors.shopName ? "border-red-500" : "border-emerald-200"
+                            }`}
+                            placeholder="Enter your shop name"
+                          />
+                        </div>
+                        {errors.shopName && <p className="mt-1 text-sm text-red-600">{errors.shopName}</p>}
+                      </div>
+
+                      {/* Shop Location */}
+                      <div>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Shop Location</label>
+                        <div className="relative" ref={suggestionRef}>
+                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                          <input
+                            type="text"
+                            name="shopLocation"
+                            value={formData.shopLocation}
+                            onChange={handleLocationChange}
+                            className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
+                              errors.shopLocation ? "border-red-500" : "border-emerald-200"
+                            }`}
+                            placeholder="Enter shop location"
+                            autoComplete="off"
+                          />
+
+                          {/* Loading indicator */}
+                          {isLocationLoading && (
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500"></div>
+                            </div>
+                          )}
+
+                          {/* Suggestions dropdown */}
+                          {showSuggestions && (
+                            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-emerald-200 max-h-60 overflow-auto">
+                              {suggestions.length > 0 ? (
+                                suggestions.map((suggestion) => (
+                                  <div
+                                    key={suggestion.id}
+                                    className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-emerald-100 last:border-0"
+                                    onClick={() => handleSuggestionClick(suggestion)}
+                                  >
+                                    <div className="flex items-start">
+                                      <MapPin className="h-5 w-5 text-emerald-500 mr-2 mt-0.5 flex-shrink-0" />
+                                      <div>
+                                        <div className="text-emerald-800 text-sm font-medium">
+                                          {suggestion.shortName}
+                                        </div>
+                                        {suggestion.shortName !== suggestion.name && (
+                                          <div className="text-xs text-emerald-600 truncate max-w-full">
+                                            {suggestion.name}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-4 py-3 text-sm text-emerald-600">
+                                  No locations found. Try a different search term.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {errors.shopLocation && <p className="mt-1 text-sm text-red-600">{errors.shopLocation}</p>}
+
+                        {/* Current Location Button */}
+                        <button
+                          type="button"
+                          onClick={getCurrentLocation}
+                          className="mt-2 w-full bg-emerald-100 text-emerald-700 py-2 px-4 rounded-lg hover:bg-emerald-200 transition-colors flex items-center justify-center gap-2"
+                          disabled={isLocationLoading}
+                        >
+                          <Navigation className="w-4 h-4" />
+                          Use Current Location
+                        </button>
+                      </div>
+
+                      {/* Map Display */}
+                      {selectedLocation && (
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-emerald-700 mb-2">Selected Location</label>
+                          <div className="h-48 w-full rounded-lg overflow-hidden border border-emerald-200">
+                            <iframe
+                              title="Shop Location Map"
+                              width="100%"
+                              height="100%"
+                              frameBorder="0"
+                              scrolling="no"
+                              marginHeight="0"
+                              marginWidth="0"
+                              src={`https://www.openstreetmap.org/export/embed.html?bbox=${selectedLocation.lng - 0.01},${selectedLocation.lat - 0.01},${selectedLocation.lng + 0.01},${selectedLocation.lat + 0.01}&layer=mapnik&marker=${selectedLocation.lat},${selectedLocation.lng}`}
+                              style={{ border: "none" }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Shop Address */}
+                      <div>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Shop Address</label>
+                        <textarea
+                          name="shopAddress"
+                          value={formData.shopAddress}
+                          onChange={handleInputChange}
+                          rows={3}
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors resize-none ${
+                            errors.shopAddress ? "border-red-500" : "border-emerald-200"
+                          }`}
+                          placeholder="Enter complete shop address"
+                        />
+                        {errors.shopAddress && <p className="mt-1 text-sm text-red-600">{errors.shopAddress}</p>}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 px-4 rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    {showOtpInput ? "Verifying OTP..." : "Sending OTP..."}
+                  </div>
+                ) : showOtpInput ? (
+                  "Verify OTP"
+                ) : isSignUp ? (
+                  "Send OTP & Create Account"
+                ) : (
+                  "Send OTP & Sign In"
+                )}
+              </button>
+            </form>
+
+            {/* Footer */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-emerald-600">
+                {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="font-medium text-emerald-700 hover:text-emerald-800 underline"
+                >
+                  {isSignUp ? "Sign In" : "Sign Up"}
+                </button>
+              </p>
+            </div>
+          </div>
+
+          {/* Jharkhand Tourism Footer */}
+          <div className="mt-8 text-center">
+            <p className="text-emerald-600 text-sm">🏔️ Discover the beauty of Jharkhand 🌿</p>
+            <p className="text-emerald-500 text-xs mt-1">Waterfalls • Temples • Wildlife • Culture</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="recaptcha-container"></div>
+    </div>
+  )
+}
+
+export default AuthPage
