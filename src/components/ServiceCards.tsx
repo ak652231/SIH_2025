@@ -158,7 +158,7 @@ const ServiceCards: React.FC = () => {
         {Array.from({ length: features.length }).map((_, i) => (
           <line
             key={i}
-            stroke="#ff3a3a"
+            stroke="#000000"
             strokeWidth="1"
             strokeDasharray="5,5"
           />

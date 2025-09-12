@@ -19,8 +19,8 @@ const poppins = Poppins({
 
 const Navbar = memo(function Navbar() {
   const navLinks = [
-    { text: "Home", href: "/" },
-    { text: "Plan Trip", href: "/plan" },
+    // { text: "Home", href: "/" },
+    { text: "Plan Trip", href: "/itinerary" },
     { text: "Destinations", href: "/destinations" },
     { text: "Marketplace", href: "/marketplace" },
     { text: "Contact", href: "/contact" },
