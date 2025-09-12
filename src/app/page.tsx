@@ -1,16 +1,15 @@
 // src/app/page.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import LocationPin from "../components/LocationPin";
 import ServiceCards from "../components/ServiceCards";
 import { Montserrat, Poppins } from "next/font/google";
-import { Search, Bell, Menu, X } from "lucide-react";
-import { useState } from "react";
-import ProcessSteps from "@/components/ProcessSteps";
 import ContactHelpCenter from "../components/ContactHelpCenter";
 import Footer from "../components/Footer";
 import Navbar from "@/components/navbar";
+import UserTypeModal from "../components/UserTypeModal"; // ✅ import modal
+
 const montserrat = Montserrat({
   subsets: ["latin"],
   variable: "--font-montserrat",
@@ -28,6 +27,17 @@ export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // ✅ modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    // ✅ check localStorage on first load
+    const hasSelected = localStorage.getItem("userTypeSelected");
+    if (!hasSelected) {
+      setIsModalOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     import("gsap").then(({ default: gsap }) => {
@@ -90,6 +100,12 @@ export default function Home() {
     <main
       className={`relative overflow-x-hidden ${montserrat.variable} ${poppins.variable} font-montserrat`}
     >
+      {/* ✅ User Type Modal */}
+      <UserTypeModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+
       {/* Enhanced Navigation */}
       <Navbar />
 
@@ -102,7 +118,7 @@ export default function Home() {
         <LocationPin />
       </section>
 
-      {/* Services Section - No pin initially here, the animated pin will arrive */}
+      {/* Services Section */}
       <section
         ref={servicesRef}
         className="relative min-h-screen bg-white py-20 px-8"
@@ -113,7 +129,7 @@ export default function Home() {
           </span>
         </h2>
 
-        {/* Pin landing spot positioned more precisely */}
+        {/* Pin landing spot */}
         <div
           id="pin-landing-spot"
           className="absolute top-8 left-1/2 transform -translate-x-1/2"
