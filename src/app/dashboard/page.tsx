@@ -30,7 +30,7 @@ const DashboardPage = () => {
   // Form data for merchants
   const [merchantFormData, setMerchantFormData] = useState({
     productName: "",
-    productPhoto: "",
+    productPhoto: [],
     description: "",
     cost: "",
   });
@@ -112,8 +112,11 @@ const DashboardPage = () => {
     const newErrors = {};
     if (!merchantFormData.productName)
       newErrors.productName = "Product name is required";
-    if (!merchantFormData.productPhoto)
-      newErrors.productPhoto = "Product photo is required";
+    if (
+      !merchantFormData.productPhoto ||
+      merchantFormData.productPhoto.length === 0
+    )
+      newErrors.productPhoto = "At least one product photo is required";
     if (!merchantFormData.description)
       newErrors.description = "Description is required";
     if (!merchantFormData.cost) newErrors.cost = "Cost is required";
@@ -157,10 +160,13 @@ const DashboardPage = () => {
         merchantName: userData.name,
         businessType: userData.businessType,
         createdAt: new Date().toISOString(),
-      })("Product added successfully!");
+      });
+
+      toast.success("Product added successfully!");
+
       setMerchantFormData({
         productName: "",
-        productPhoto: "",
+        productPhoto: [],
         description: "",
         cost: "",
       });
@@ -322,13 +328,14 @@ const DashboardPage = () => {
 
                   <div>
                     <CloudinaryUpload
-                      onUploadSuccess={(url) =>
-                        setMerchantFormData({
-                          ...merchantFormData,
-                          productPhoto: url,
-                        })
+                      multiple={true}
+                      onUploadSuccess={(urls) =>
+                        setMerchantFormData((prev) => ({
+                          ...prev,
+                          productPhoto: [...prev.productPhoto, ...urls],
+                        }))
                       }
-                      label="Product Photo"
+                      label="Product Photos"
                       acceptedFileTypes="image/*"
                       className={`w-full border-2 border-dashed ${
                         errors.productPhoto
@@ -337,39 +344,40 @@ const DashboardPage = () => {
                       } rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors`}
                     />
 
-                    {merchantFormData.productPhoto ? (
-                      <div className="flex flex-col items-center mt-3">
-                        <div className="flex items-center justify-center mb-2 text-green-600">
-                          <Check className="h-6 w-6 mr-1" />
-                          <span className="font-medium">File uploaded</span>
-                        </div>
-                        <img
-                          src={
-                            typeof merchantFormData.productPhoto === "string"
-                              ? merchantFormData.productPhoto
-                              : URL.createObjectURL(
-                                  merchantFormData.productPhoto
-                                ) // if it's a File object
-                          }
-                          alt="Uploaded Product"
-                          className="w-full h-40 object-cover rounded-lg border border-emerald-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setMerchantFormData((prev) => ({
-                              ...prev,
-                              productPhoto: null,
-                            }))
-                          }
-                          className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
-                        >
-                          Remove
-                        </button>
+                    {merchantFormData.productPhoto.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
+                        {merchantFormData.productPhoto.map(
+                          (photoUrl, index) => (
+                            <div
+                              key={index}
+                              className="flex flex-col items-center"
+                            >
+                              <img
+                                src={photoUrl}
+                                alt={`Product Photo ${index + 1}`}
+                                className="w-full h-40 object-cover rounded-lg border border-emerald-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setMerchantFormData((prev) => ({
+                                    ...prev,
+                                    productPhoto: prev.productPhoto.filter(
+                                      (_, i) => i !== index
+                                    ),
+                                  }))
+                                }
+                                className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )
+                        )}
                       </div>
                     ) : (
                       <p className="text-xs text-gray-500 text-center mt-2">
-                        PNG, JPG, or PDF (max. 5MB)
+                        PNG, JPG, or PDF (max. 5MB each)
                       </p>
                     )}
 
