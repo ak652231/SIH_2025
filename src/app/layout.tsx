@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NavbarProvider } from "@/components/NavbarContext";
 import Providers from "./providers";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,17 @@ export default function RootLayout({
         <Providers>
           <NavbarProvider>{children}</NavbarProvider>
         </Providers>
+        <Toaster
+          theme="light"
+          richColors
+          toastOptions={{
+            classNames: {
+              error: "bg-red-600 text-white font-medium border-red-700",
+              success: "text-green-600 bg-white font-medium border-green-700",
+              warning: "text-yellow-600 bg-white font-medium border-yellow-700",
+            },
+          }}
+        />
       </body>
     </html>
   );
