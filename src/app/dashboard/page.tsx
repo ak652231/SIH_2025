@@ -52,7 +52,7 @@ const DashboardPage = () => {
     availability: "",
     whatsIncluded: "",
     whatsNotIncluded: "",
-    tourPhotos: "",
+    tourPhotos: [],
     cancellationPolicy: "",
     safetyNotes: "",
     lat: null,
@@ -205,7 +205,7 @@ const DashboardPage = () => {
         availability: "",
         whatsIncluded: "",
         whatsNotIncluded: "",
-        tourPhotos: "",
+        tourPhotos: [],
         cancellationPolicy: "",
         safetyNotes: "",
         lat: null,
@@ -681,11 +681,12 @@ const DashboardPage = () => {
 
                   <div>
                     <CloudinaryUpload
-                      onUploadSuccess={(url) =>
-                        setTourGuideFormData({
-                          ...tourGuideFormData,
-                          tourPhotos: url,
-                        })
+                      multiple={true}
+                      onUploadSuccess={(urls) =>
+                        setTourGuideFormData((prev) => ({
+                          ...prev,
+                          tourPhotos: [...prev.tourPhotos, ...urls],
+                        }))
                       }
                       label="Tour Photos"
                       className={`w-full border-2 border-dashed ${
@@ -693,39 +694,38 @@ const DashboardPage = () => {
                       } rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors`}
                     />
 
-                    {tourGuideFormData.tourPhotos ? (
-                      <div className="flex flex-col items-center mt-3">
-                        <div className="flex items-center justify-center mb-2 text-green-600">
-                          <Check className="h-6 w-6 mr-1" />
-                          <span className="font-medium">File uploaded</span>
-                        </div>
-                        <img
-                          src={
-                            typeof tourGuideFormData.tourPhotos === "string"
-                              ? tourGuideFormData.tourPhotos
-                              : URL.createObjectURL(
-                                  tourGuideFormData.tourPhotos
-                                ) // if it's a File object
-                          }
-                          alt="Uploaded Product"
-                          className="w-full h-40 object-cover rounded-lg border border-emerald-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTourGuideFormData((prev) => ({
-                              ...prev,
-                              tourPhotos: null,
-                            }))
-                          }
-                          className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
-                        >
-                          Remove
-                        </button>
+                    {tourGuideFormData.tourPhotos.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
+                        {tourGuideFormData.tourPhotos.map((photoUrl, index) => (
+                          <div
+                            key={index}
+                            className="flex flex-col items-center"
+                          >
+                            <img
+                              src={photoUrl}
+                              alt={`Tour Photo ${index + 1}`}
+                              className="w-full h-40 object-cover rounded-lg border border-emerald-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTourGuideFormData((prev) => ({
+                                  ...prev,
+                                  tourPhotos: prev.tourPhotos.filter(
+                                    (_, i) => i !== index
+                                  ),
+                                }))
+                              }
+                              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-xs text-gray-500 text-center mt-2">
-                        PNG, JPG, or PDF (max. 5MB)
+                        PNG, JPG, or PDF (max. 5MB each)
                       </p>
                     )}
                   </div>
