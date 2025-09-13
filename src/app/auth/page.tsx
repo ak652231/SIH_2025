@@ -1,14 +1,25 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, signInWithCredential } from "firebase/auth"
+import { useState, useRef, useEffect } from "react"
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+  signInWithCredential,
+  onAuthStateChanged,
+} from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { auth, db } from "../../lib/firebase"
-import { MapPin, Phone, User, Store, Navigation, Mountain, Camera, Compass } from "lucide-react"
+import { MapPin, Phone, User, Store, Navigation, Mountain, Camera, Compass, Languages, Building } from "lucide-react"
+import { useRouter } from "next/navigation"
+import CloudinaryUpload from "../../components/CloudinaryUpload"
+import { Check
+} from "lucide-react"
 
 const AuthPage = () => {
+  const router = useRouter()
   const [isSignUp, setIsSignUp] = useState(true)
-  const [userType, setUserType] = useState("vendor") // 'vendor' or 'tourguide'
+  const [userType, setUserType] = useState("merchant") // Changed from 'vendor' to 'merchant'
   const [isLoading, setIsLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -21,12 +32,24 @@ const AuthPage = () => {
   const suggestionRef = useRef(null)
   const searchTimeoutRef = useRef(null)
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push("/")
+      }
+    })
+    return () => unsubscribe()
+  }, [router])
+
   const [formData, setFormData] = useState({
     phone: "",
     name: "",
-    shopName: "",
-    shopLocation: "",
-    shopAddress: "",
+    businessName: "", // Changed from shopName to businessName
+    businessLocation: "", // Changed from shopLocation to businessLocation
+    businessAddress: "", // Changed from shopAddress to businessAddress
+    businessType: "", // Added business category field
+    profilePhoto: "", // Added profile photo for tour guides
+    languagesSpoken: "", // Added languages spoken for tour guides
     lat: null,
     lng: null,
   })
@@ -78,7 +101,7 @@ const AuthPage = () => {
 
   const handleLocationChange = (e) => {
     const { value } = e.target
-    setFormData({ ...formData, shopLocation: value })
+    setFormData({ ...formData, businessLocation: value }) // Updated field name
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
@@ -99,7 +122,7 @@ const AuthPage = () => {
   const handleSuggestionClick = (suggestion) => {
     setFormData({
       ...formData,
-      shopLocation: suggestion.name,
+      businessLocation: suggestion.name, // Updated field name
       lat: suggestion.lat,
       lng: suggestion.lng,
     })
@@ -129,7 +152,7 @@ const AuthPage = () => {
               const locationName = data.display_name
               setFormData({
                 ...formData,
-                shopLocation: locationName,
+                businessLocation: locationName, // Updated field name
                 lat: latitude,
                 lng: longitude,
               })
@@ -172,10 +195,18 @@ const AuthPage = () => {
     if (isSignUp) {
       if (!formData.name) newErrors.name = "Name is required"
 
-      if (userType === "vendor") {
-        if (!formData.shopName) newErrors.shopName = "Shop name is required"
-        if (!formData.shopLocation) newErrors.shopLocation = "Shop location is required"
-        if (!formData.shopAddress) newErrors.shopAddress = "Shop address is required"
+      if (userType === "merchant") {
+        // Updated condition
+        if (!formData.businessName) newErrors.businessName = "Business name is required" // Updated field name
+        if (!formData.businessLocation) newErrors.businessLocation = "Business location is required" // Updated field name
+        if (!formData.businessAddress) newErrors.businessAddress = "Business address is required" // Updated field name
+        if (!formData.businessType) newErrors.businessType = "Business category is required" // Added validation
+      }
+
+      if (userType === "tourguide") {
+        // Added tour guide validation
+        if (!formData.profilePhoto) newErrors.profilePhoto = "Profile photo is required"
+        if (!formData.languagesSpoken) newErrors.languagesSpoken = "Languages spoken is required"
       }
     }
 
@@ -232,22 +263,32 @@ const AuthPage = () => {
           uid: user.uid,
           phone: formData.phone,
           name: formData.name,
-          userType: userType, // Added userType field
+          userType: userType, // Updated to use merchant/tourguide
           createdAt: new Date().toISOString(),
         }
 
-        if (userType === "vendor") {
-          userData.shopName = formData.shopName
-          userData.shopLocation = formData.shopLocation
-          userData.shopAddress = formData.shopAddress
+        if (userType === "merchant") {
+          // Updated condition
+          userData.businessName = formData.businessName // Updated field names
+          userData.businessLocation = formData.businessLocation
+          userData.businessAddress = formData.businessAddress
+          userData.businessType = formData.businessType // Added business type
           userData.lat = formData.lat
           userData.lng = formData.lng
         }
 
+        if (userType === "tourguide") {
+          // Added tour guide data
+          userData.profilePhoto = formData.profilePhoto
+          userData.languagesSpoken = formData.languagesSpoken
+        }
+
         await setDoc(doc(db, "users", user.uid), userData)
         alert("Account created successfully!")
+        router.push("/dashboard") // Redirect to dashboard
       } else {
         alert("Signed in successfully!")
+        router.push("/dashboard") // Redirect to dashboard
       }
 
       // Reset form
@@ -274,7 +315,7 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 relative overflow-hidden">
-      {/* Background decorative elements */}
+      {/* ... existing background elements ... */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full opacity-20 animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-teal-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
@@ -285,7 +326,7 @@ const AuthPage = () => {
 
       <div className="relative z-10 container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto">
-          {/* Header */}
+          {/* ... existing header ... */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full mb-4 shadow-lg">
               <MapPin className="w-10 h-10 text-white" />
@@ -296,7 +337,7 @@ const AuthPage = () => {
 
           {/* Auth Form */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-emerald-100">
-            {/* Toggle Sign Up / Sign In */}
+            {/* ... existing toggle buttons ... */}
             <div className="flex bg-emerald-50 rounded-lg p-1 mb-6">
               <button
                 type="button"
@@ -325,15 +366,15 @@ const AuthPage = () => {
                 <div className="flex bg-emerald-50 rounded-lg p-1">
                   <button
                     type="button"
-                    onClick={() => setUserType("vendor")}
+                    onClick={() => setUserType("merchant")} // Updated to merchant
                     className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                      userType === "vendor"
+                      userType === "merchant"
                         ? "bg-emerald-600 text-white shadow-sm"
                         : "text-emerald-600 hover:text-emerald-700"
                     }`}
                   >
                     <Store className="w-4 h-4" />
-                    Vendor
+                    Merchant {/* Updated label */}
                   </button>
                   <button
                     type="button"
@@ -352,6 +393,7 @@ const AuthPage = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* ... existing phone field ... */}
               <div>
                 <label className="block text-sm font-medium text-emerald-700 mb-1">Phone Number</label>
                 <div className="relative">
@@ -371,6 +413,7 @@ const AuthPage = () => {
                 {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
               </div>
 
+              {/* ... existing OTP field ... */}
               {showOtpInput && (
                 <div>
                   <label className="block text-sm font-medium text-emerald-700 mb-1">Enter OTP</label>
@@ -420,54 +463,75 @@ const AuthPage = () => {
                     {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                   </div>
 
-
-                  {/* Vendor-specific fields */}
-                  {userType === "vendor" && (
+                  {/* Merchant-specific fields */}
+                  {userType === "merchant" && ( // Updated condition
                     <>
-                      {/* Shop Name */}
+                      {/* Business Name */}
                       <div>
-                        <label className="block text-sm font-medium text-emerald-700 mb-1">Shop Name</label>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Business Name</label>{" "}
+                        {/* Updated label */}
                         <div className="relative">
                           <Store className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
                           <input
                             type="text"
-                            name="shopName"
-                            value={formData.shopName}
+                            name="businessName" // Updated field name
+                            value={formData.businessName}
                             onChange={handleInputChange}
                             className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
-                              errors.shopName ? "border-red-500" : "border-emerald-200"
+                              errors.businessName ? "border-red-500" : "border-emerald-200"
                             }`}
-                            placeholder="Enter your shop name"
+                            placeholder="Enter your business name" // Updated placeholder
                           />
                         </div>
-                        {errors.shopName && <p className="mt-1 text-sm text-red-600">{errors.shopName}</p>}
+                        {errors.businessName && <p className="mt-1 text-sm text-red-600">{errors.businessName}</p>}
                       </div>
 
-                      {/* Shop Location */}
                       <div>
-                        <label className="block text-sm font-medium text-emerald-700 mb-1">Shop Location</label>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Business Category</label>
+                        <div className="relative">
+                          <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                          <select
+                            name="businessType"
+                            value={formData.businessType}
+                            onChange={handleInputChange}
+                            className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
+                              errors.businessType ? "border-red-500" : "border-emerald-200"
+                            }`}
+                          >
+                            <option value="">Select a category</option>
+                            <option value="accommodation">Accommodation</option>
+                            <option value="dining">Dining</option>
+                            <option value="shopping">Shopping</option>
+                          </select>
+                        </div>
+                        {errors.businessType && <p className="mt-1 text-sm text-red-600">{errors.businessType}</p>}
+                      </div>
+
+                      {/* Business Location */}
+                      <div>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Business Location</label>{" "}
+                        {/* Updated label */}
                         <div className="relative" ref={suggestionRef}>
                           <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
                           <input
                             type="text"
-                            name="shopLocation"
-                            value={formData.shopLocation}
+                            name="businessLocation" // Updated field name
+                            value={formData.businessLocation}
                             onChange={handleLocationChange}
                             className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
-                              errors.shopLocation ? "border-red-500" : "border-emerald-200"
+                              errors.businessLocation ? "border-red-500" : "border-emerald-200"
                             }`}
-                            placeholder="Enter shop location"
+                            placeholder="Enter business location" // Updated placeholder
                             autoComplete="off"
                           />
 
-                          {/* Loading indicator */}
+                          {/* ... existing loading indicator and suggestions ... */}
                           {isLocationLoading && (
                             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500"></div>
                             </div>
                           )}
 
-                          {/* Suggestions dropdown */}
                           {showSuggestions && (
                             <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-emerald-200 max-h-60 overflow-auto">
                               {suggestions.length > 0 ? (
@@ -500,8 +564,9 @@ const AuthPage = () => {
                             </div>
                           )}
                         </div>
-                        {errors.shopLocation && <p className="mt-1 text-sm text-red-600">{errors.shopLocation}</p>}
-
+                        {errors.businessLocation && (
+                          <p className="mt-1 text-sm text-red-600">{errors.businessLocation}</p>
+                        )}
                         {/* Current Location Button */}
                         <button
                           type="button"
@@ -520,7 +585,7 @@ const AuthPage = () => {
                           <label className="block text-sm font-medium text-emerald-700 mb-2">Selected Location</label>
                           <div className="h-48 w-full rounded-lg overflow-hidden border border-emerald-200">
                             <iframe
-                              title="Shop Location Map"
+                              title="Business Location Map" // Updated title
                               width="100%"
                               height="100%"
                               frameBorder="0"
@@ -534,26 +599,99 @@ const AuthPage = () => {
                         </div>
                       )}
 
-                      {/* Shop Address */}
+                      {/* Business Address */}
                       <div>
-                        <label className="block text-sm font-medium text-emerald-700 mb-1">Shop Address</label>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Business Address</label>{" "}
+                        {/* Updated label */}
                         <textarea
-                          name="shopAddress"
-                          value={formData.shopAddress}
+                          name="businessAddress" // Updated field name
+                          value={formData.businessAddress}
                           onChange={handleInputChange}
                           rows={3}
                           className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors resize-none ${
-                            errors.shopAddress ? "border-red-500" : "border-emerald-200"
+                            errors.businessAddress ? "border-red-500" : "border-emerald-200"
                           }`}
-                          placeholder="Enter complete shop address"
+                          placeholder="Enter complete business address" // Updated placeholder
                         />
-                        {errors.shopAddress && <p className="mt-1 text-sm text-red-600">{errors.shopAddress}</p>}
+                        {errors.businessAddress && (
+                          <p className="mt-1 text-sm text-red-600">{errors.businessAddress}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {userType === "tourguide" && (
+                    <>
+                      {/* Profile Photo */}
+                      <div>
+                        <CloudinaryUpload
+                          onUploadSuccess={(url) => setFormData({ ...formData, profilePhoto: url })}
+                          label="Profile Photo"
+                          className={`w-full border-2 border-dashed ${
+                  errors.profilePhoto ? "border-red-500" : "border-gray-300"
+                } rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors`}
+                        />
+
+                               {formData.profilePhoto ? (
+                <div className="flex flex-col items-center mt-3">
+                  <div className="flex items-center justify-center mb-2 text-green-600">
+                    <Check className="h-6 w-6 mr-1" />
+                    <span className="font-medium">File uploaded</span>
+                  </div>
+                 <img
+    src={
+      typeof formData.profilePhoto === "string"
+        ? formData.profilePhoto
+        : URL.createObjectURL(formData.profilePhoto) // if it's a File object
+    }
+    alt="Uploaded Product"
+    className="w-full h-40 object-cover rounded-lg border border-emerald-200"
+  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        profilePhoto: null,
+                      }))
+                    }
+                    className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 text-center mt-2">PNG, JPG, or PDF (max. 5MB)</p>
+              )}
+                        {errors.profilePhoto && <p className="mt-1 text-sm text-red-600">{errors.profilePhoto}</p>}
+                      </div>
+
+                      {/* Languages Spoken */}
+                      <div>
+                        <label className="block text-sm font-medium text-emerald-700 mb-1">Languages Spoken</label>
+                        <div className="relative">
+                          <Languages className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                          <input
+                            type="text"
+                            name="languagesSpoken"
+                            value={formData.languagesSpoken}
+                            onChange={handleInputChange}
+                            className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
+                              errors.languagesSpoken ? "border-red-500" : "border-emerald-200"
+                            }`}
+                            placeholder="e.g., Hindi, English, Bengali"
+                          />
+                        </div>
+                        {errors.languagesSpoken && (
+                          <p className="mt-1 text-sm text-red-600">{errors.languagesSpoken}</p>
+                        )}
                       </div>
                     </>
                   )}
                 </>
               )}
 
+              {/* ... existing submit button ... */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -574,7 +712,7 @@ const AuthPage = () => {
               </button>
             </form>
 
-            {/* Footer */}
+            {/* ... existing footer ... */}
             <div className="mt-6 text-center">
               <p className="text-sm text-emerald-600">
                 {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
@@ -589,7 +727,7 @@ const AuthPage = () => {
             </div>
           </div>
 
-          {/* Jharkhand Tourism Footer */}
+          {/* ... existing Jharkhand footer ... */}
           <div className="mt-8 text-center">
             <p className="text-emerald-600 text-sm">🏔️ Discover the beauty of Jharkhand 🌿</p>
             <p className="text-emerald-500 text-xs mt-1">Waterfalls • Temples • Wildlife • Culture</p>
