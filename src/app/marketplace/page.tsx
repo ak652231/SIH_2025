@@ -248,7 +248,7 @@ const MarketplacePage = () => {
                   <div className="h-48 bg-gradient-to-br from-emerald-100 to-teal-100 relative overflow-hidden">
                     {product.productPhoto ? (
                       <img
-                        src={product.productPhoto || "/placeholder.svg"}
+                        src={product.productPhoto[0] || "/placeholder.svg"}
                         alt={product.productName}
                         className="w-full h-full object-cover"
                       />

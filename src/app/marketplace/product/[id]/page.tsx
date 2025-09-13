@@ -114,7 +114,8 @@ const ProductDetailPage = ({ params }) => {
   }
 
   // Create image array (for carousel - currently single image)
-  const images = product.productPhoto ? [product.productPhoto] : []
+  const images = product.productPhoto || []
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
