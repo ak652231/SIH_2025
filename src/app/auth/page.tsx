@@ -70,9 +70,7 @@ const AuthPage = () => {
   const fetchFromNominatim = async (query) => {
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          query + " Jharkhand India"
-        )}&addressdetails=1&limit=5&countrycodes=in`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query+" India")}&addressdetails=1&limit=5&countrycodes=in`,
         {
           headers: {
             "Accept-Language": "en",
