@@ -71,37 +71,39 @@ const DashboardPage = () => {
   const [errors, setErrors] = useState({});
 
   // Auth listener effect
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-    if (currentUser) {
-      setUser(currentUser);
-      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-      if (userDoc.exists()) {
-        setUserData(userDoc.data());
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+      } else {
+        router.push("/auth");
       }
-    } else {
-      router.push("/auth");
-    }
-    setIsLoading(false);
-  });
+      setIsLoading(false);
+    });
 
-  return () => unsubscribe();
-}, [router]);
+    return () => unsubscribe();
+  }, [router]);
 
-// Click outside listener effect
-useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
-      setShowSuggestions(false);
-    }
-  };
+  // Click outside listener effect
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionRef.current &&
+        !suggestionRef.current.contains(event.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
 
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-  };
-}, []);
-
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Location fetching logic
   const fetchFromNominatim = async (query) => {
@@ -134,7 +136,6 @@ useEffect(() => {
       return [];
     }
   };
-
 
   const fetchLocationSuggestions = async (query) => {
     setIsLocationLoading(true);
@@ -170,7 +171,7 @@ useEffect(() => {
   const handleSuggestionClick = (suggestion) => {
     setTourGuideFormData({
       ...tourGuideFormData,
-      meetingPoint: suggestion.name,
+      meetingPoint: suggestion.shortName, // Use shortName instead of name
       lat: suggestion.lat,
       lng: suggestion.lng,
     });
@@ -196,15 +197,16 @@ useEffect(() => {
             );
             if (response.ok) {
               const data = await response.json();
-              const locationName = data.display_name;
+              const shortLocationName = data.display_name.split(",")[0]; // Use just the first part
               setTourGuideFormData({
                 ...tourGuideFormData,
-                meetingPoint: locationName,
+                meetingPoint: shortLocationName, // Use short name instead of full address
                 lat: latitude,
                 lng: longitude,
               });
               setSelectedLocation({
-                name: locationName,
+                name: data.display_name, // Keep full name for display
+                shortName: shortLocationName,
                 lat: latitude,
                 lng: longitude,
               });
@@ -736,8 +738,45 @@ useEffect(() => {
                         {errors.meetingPoint}
                       </p>
                     )}
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      className="mt-2 w-full bg-emerald-100 text-emerald-700 py-2 px-4 rounded-lg hover:bg-emerald-200 transition-colors flex items-center justify-center gap-2"
+                      disabled={isLocationLoading}
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Use Current Location
+                    </button>
                   </div>
-
+                  {selectedLocation && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-emerald-700 mb-2">
+                        Selected Meeting Point
+                      </label>
+                      <div className="h-48 w-full rounded-lg overflow-hidden border border-emerald-200">
+                        <iframe
+                          key={`${selectedLocation.lat}-${selectedLocation.lng}`} // <-- THE FIX IS HERE
+                          title="Meeting Point Map"
+                          width="100%"
+                          height="100%"
+                          frameBorder="0"
+                          scrolling="no"
+                          marginHeight="0"
+                          marginWidth="0"
+                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${
+                            selectedLocation.lng - 0.01
+                          },${selectedLocation.lat - 0.01},${
+                            selectedLocation.lng + 0.01
+                          },${
+                            selectedLocation.lat + 0.01
+                          }&layer=mapnik&marker=${selectedLocation.lat},${
+                            selectedLocation.lng
+                          }`}
+                          style={{ border: "none" }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-emerald-700 mb-1">
                       Tour Category
