@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, collection, addDoc } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
@@ -14,6 +14,8 @@ import {
   Clock,
   Users,
   LogOut,
+  MapPin,
+  Navigation,
 } from "lucide-react";
 import CloudinaryUpload from "../../components/CloudinaryUpload";
 import { Check } from "lucide-react";
@@ -26,6 +28,13 @@ const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const suggestionRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
   // Form data for merchants
   const [merchantFormData, setMerchantFormData] = useState({
@@ -61,23 +70,159 @@ const DashboardPage = () => {
 
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        // Fetch user data from Firestore
-        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-        if (userDoc.exists()) {
-          setUserData(userDoc.data());
-        }
-      } else {
-        router.push("/auth");
+  // Auth listener effect
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    if (currentUser) {
+      setUser(currentUser);
+      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+      if (userDoc.exists()) {
+        setUserData(userDoc.data());
       }
-      setIsLoading(false);
-    });
+    } else {
+      router.push("/auth");
+    }
+    setIsLoading(false);
+  });
 
-    return () => unsubscribe();
-  }, [router]);
+  return () => unsubscribe();
+}, [router]);
+
+// Click outside listener effect
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
+      setShowSuggestions(false);
+    }
+  };
+
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
+
+
+  // Location fetching logic
+  const fetchFromNominatim = async (query) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          query + " India"
+        )}&addressdetails=1&limit=5&countrycodes=in`,
+        {
+          headers: {
+            "Accept-Language": "en",
+            "User-Agent": "JharkhandTourApp/1.0",
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data.map((item) => ({
+          id: `nom-${item.place_id}`,
+          name: item.display_name,
+          shortName: item.display_name.split(",")[0],
+          source: "nominatim",
+          lat: Number.parseFloat(item.lat),
+          lng: Number.parseFloat(item.lon),
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error("Nominatim error:", error);
+      return [];
+    }
+  };
+
+
+  const fetchLocationSuggestions = async (query) => {
+    setIsLocationLoading(true);
+    try {
+      const results = await fetchFromNominatim(query);
+      setSuggestions(results);
+      setShowSuggestions(results.length > 0);
+    } catch (error) {
+      console.error("Error fetching location suggestions:", error);
+    } finally {
+      setIsLocationLoading(false);
+    }
+  };
+
+  const handleMeetingPointChange = (e) => {
+    const { value } = e.target;
+    setTourGuideFormData({ ...tourGuideFormData, meetingPoint: value });
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    if (value.trim().length >= 2) {
+      setIsLocationLoading(true);
+      searchTimeoutRef.current = setTimeout(() => {
+        fetchLocationSuggestions(value);
+      }, 300);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setIsLocationLoading(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setTourGuideFormData({
+      ...tourGuideFormData,
+      meetingPoint: suggestion.name,
+      lat: suggestion.lat,
+      lng: suggestion.lng,
+    });
+    setSelectedLocation(suggestion);
+    setShowSuggestions(false);
+  };
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      setIsLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+              {
+                headers: {
+                  "Accept-Language": "en",
+                  "User-Agent": "JharkhandTourApp/1.0",
+                },
+              }
+            );
+            if (response.ok) {
+              const data = await response.json();
+              const locationName = data.display_name;
+              setTourGuideFormData({
+                ...tourGuideFormData,
+                meetingPoint: locationName,
+                lat: latitude,
+                lng: longitude,
+              });
+              setSelectedLocation({
+                name: locationName,
+                lat: latitude,
+                lng: longitude,
+              });
+            }
+          } catch (error) {
+            console.error("Error getting location name:", error);
+          } finally {
+            setIsLocationLoading(false);
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          toast.error("Could not get current location.");
+          setIsLocationLoading(false);
+        }
+      );
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -531,18 +676,61 @@ const DashboardPage = () => {
                     <label className="block text-sm font-medium text-emerald-700 mb-1">
                       Meeting Point
                     </label>
-                    <input
-                      type="text"
-                      name="meetingPoint"
-                      value={tourGuideFormData.meetingPoint}
-                      onChange={handleTourGuideInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
-                        errors.meetingPoint
-                          ? "border-red-500"
-                          : "border-emerald-200"
-                      }`}
-                      placeholder="Specific place customers should come to"
-                    />
+                    <div className="relative" ref={suggestionRef}>
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                      <input
+                        type="text"
+                        name="meetingPoint"
+                        value={tourGuideFormData.meetingPoint}
+                        onChange={handleMeetingPointChange}
+                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${
+                          errors.meetingPoint
+                            ? "border-red-500"
+                            : "border-emerald-200"
+                        }`}
+                        placeholder="Search for a meeting location"
+                        autoComplete="off"
+                      />
+                      {isLocationLoading && (
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500"></div>
+                        </div>
+                      )}
+                      {showSuggestions && (
+                        <div className="absolute z-20 mt-1 w-full bg-white shadow-lg rounded-md border border-emerald-200 max-h-60 overflow-auto">
+                          {suggestions.length > 0 ? (
+                            suggestions.map((suggestion) => (
+                              <div
+                                key={suggestion.id}
+                                className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-emerald-100 last:border-0"
+                                onClick={() =>
+                                  handleSuggestionClick(suggestion)
+                                }
+                              >
+                                <div className="flex items-start">
+                                  <MapPin className="h-5 w-5 text-emerald-500 mr-2 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <div className="text-emerald-800 text-sm font-medium">
+                                      {suggestion.shortName}
+                                    </div>
+                                    {suggestion.shortName !==
+                                      suggestion.name && (
+                                      <div className="text-xs text-emerald-600 truncate max-w-full">
+                                        {suggestion.name}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-4 py-3 text-sm text-emerald-600">
+                              No locations found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     {errors.meetingPoint && (
                       <p className="mt-1 text-sm text-red-600">
                         {errors.meetingPoint}
