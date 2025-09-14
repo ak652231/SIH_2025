@@ -1,144 +1,235 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
-import { db } from "../../../../lib/firebase"
-import { ArrowLeft, MapPin, Phone, Store } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+import { db } from "../../../../lib/firebase";
+import {
+  ArrowLeft,
+  MapPin,
+  Phone,
+  Store,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+
+// React Leaflet imports
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix Leaflet marker icons for Next.js
+const userIcon = new L.Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const businessIcon = new L.Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 const ProductDetailPage = ({ params }) => {
-  const router = useRouter()
-  const [product, setProduct] = useState(null)
-  const [merchant, setMerchant] = useState(null)
-  const [userLocation, setUserLocation] = useState(null)
-  const [distance, setDistance] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const router = useRouter();
+  const [product, setProduct] = useState(null);
+  const [merchant, setMerchant] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [distance, setDistance] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Haversine distance calculation
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371 // Radius of the Earth in kilometers
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLon = ((lon2 - lon1) * Math.PI) / 180
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    const distance = R * c // Distance in kilometers
-    return distance
-  }
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const MapLegend = () => {
+    const map = useMap();
+
+    useEffect(() => {
+      const legend = L.control({ position: "topright" });
+
+      legend.onAdd = () => {
+        const div = L.DomUtil.create(
+          "div",
+          "map-legend bg-white p-3 rounded-lg shadow-lg border border-emerald-100"
+        );
+        div.innerHTML = `
+        <div style="font-size:14px; color:#065f46; font-weight:600; margin-bottom:8px;">Legend</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png" height="20"/>
+          <span style="font-size:13px; color:#374151;">Your Location</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png" height="20"/>
+          <span style="font-size:13px; color:#374151;">Business</span>
+        </div>
+      `;
+        return div;
+      };
+
+      legend.addTo(map);
+
+      return () => {
+        legend.remove();
+      };
+    }, [map]);
+
+    return null;
+  };
 
   // Get user's current location
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, longitude } = position.coords
-          setUserLocation({ lat: latitude, lng: longitude })
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
         },
-        (error) => {
-          console.error("Error getting location:", error)
-          // Default to Ranchi, Jharkhand if location access denied
-          setUserLocation({ lat: 23.3441, lng: 85.3096 })
-        },
-      )
+        () => {
+          setUserLocation({ lat: 23.3441, lng: 85.3096 }); // Ranchi default
+        }
+      );
     } else {
-      // Default to Ranchi, Jharkhand if geolocation not supported
-      setUserLocation({ lat: 23.3441, lng: 85.3096 })
+      setUserLocation({ lat: 23.3441, lng: 85.3096 });
     }
-  }
+  };
 
   // Fetch product details
   const fetchProductDetails = async () => {
     try {
-      const productDoc = await getDoc(doc(db, "products", params.id))
+      const productDoc = await getDoc(doc(db, "products", params.id));
 
       if (productDoc.exists()) {
-        const productData = productDoc.data()
-        setProduct({ id: productDoc.id, ...productData })
+        const productData = productDoc.data();
+        setProduct({ id: productDoc.id, ...productData });
 
         // Fetch merchant details
-        const merchantQuery = query(collection(db, "users"), where("uid", "==", productData.merchantId))
-        const merchantSnapshot = await getDocs(merchantQuery)
+        const merchantQuery = query(
+          collection(db, "users"),
+          where("uid", "==", productData.merchantId)
+        );
+        const merchantSnapshot = await getDocs(merchantQuery);
 
         if (!merchantSnapshot.empty) {
-          const merchantData = merchantSnapshot.docs[0].data()
-          setMerchant(merchantData)
+          const merchantData = merchantSnapshot.docs[0].data();
+          setMerchant(merchantData);
 
-          // Calculate distance if user location is available
           if (userLocation && merchantData.lat && merchantData.lng) {
-            const dist = calculateDistance(userLocation.lat, userLocation.lng, merchantData.lat, merchantData.lng)
-            setDistance(dist)
+            const dist = calculateDistance(
+              userLocation.lat,
+              userLocation.lng,
+              merchantData.lat,
+              merchantData.lng
+            );
+            setDistance(dist);
           }
         }
       }
     } catch (error) {
-      console.error("Error fetching product details:", error)
+      console.error("Error fetching product details:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    getCurrentLocation()
-  }, [])
+    getCurrentLocation();
+  }, []);
 
   useEffect(() => {
     if (params.id) {
-      fetchProductDetails()
+      fetchProductDetails();
     }
-  }, [params.id, userLocation])
+  }, [params.id, userLocation]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200 border-t-emerald-600 mx-auto mb-4"></div>
+          <p className="text-emerald-700 font-medium">
+            Loading product details...
+          </p>
+        </div>
       </div>
-    )
+    );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-emerald-800 mb-2">Product not found</h2>
-          <button
-            onClick={() => router.push("/marketplace")}
-            className="text-emerald-600 hover:text-emerald-700 underline"
-          >
-            Back to marketplace
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-emerald-100">
+            <Store className="w-16 h-16 text-emerald-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-emerald-800 mb-3">
+              Product not found
+            </h2>
+            <p className="text-emerald-600 mb-6">
+              The product you're looking for doesn't exist or has been removed.
+            </p>
+            <button
+              onClick={() => router.push("/marketplace")}
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 flex items-center gap-2 mx-auto"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to marketplace
+            </button>
+          </div>
         </div>
       </div>
-    )
+    );
   }
 
-  // Create image array (for carousel - currently single image)
-  const images = product.productPhoto || []
-
+  const images = product.productPhoto || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-emerald-100 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+      <div className="bg-white/90 backdrop-blur-md border-b border-emerald-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             onClick={() => router.push("/marketplace")}
-            className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors"
+            className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors duration-200 font-medium group"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
             Back to marketplace
           </button>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Product Images */}
-          <div className="space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="xl:col-span-2 space-y-6">
             {images.length > 0 ? (
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-emerald-100">
-                <div className="h-96 relative">
+              <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-emerald-100">
+                <div className="relative h-[500px] group">
                   <img
                     src={images[currentImageIndex] || "/placeholder.svg"}
                     alt={product.productName}
@@ -147,149 +238,218 @@ const ProductDetailPage = ({ params }) => {
                   {images.length > 1 && (
                     <>
                       <button
-                        onClick={() => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)}
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors"
+                        onClick={() =>
+                          setCurrentImageIndex(
+                            (prev) => (prev - 1 + images.length) % images.length
+                          )
+                        }
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm rounded-full p-3 hover:bg-white transition-all duration-200 shadow-lg opacity-0 group-hover:opacity-100"
                       >
-                        <ArrowLeft className="w-5 h-5 text-emerald-600" />
+                        <ChevronLeft className="w-6 h-6 text-emerald-600" />
                       </button>
                       <button
-                        onClick={() => setCurrentImageIndex((prev) => (prev + 1) % images.length)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors"
+                        onClick={() =>
+                          setCurrentImageIndex(
+                            (prev) => (prev + 1) % images.length
+                          )
+                        }
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm rounded-full p-3 hover:bg-white transition-all duration-200 shadow-lg opacity-0 group-hover:opacity-100"
                       >
-                        <ArrowLeft className="w-5 h-5 text-emerald-600 rotate-180" />
+                        <ChevronRight className="w-6 h-6 text-emerald-600" />
                       </button>
                     </>
                   )}
+                  {images.length > 1 && (
+                    <div className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium">
+                      {currentImageIndex + 1} / {images.length}
+                    </div>
+                  )}
                 </div>
                 {images.length > 1 && (
-                  <div className="flex gap-2 p-4">
-                    {images.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentImageIndex(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 ${
-                          index === currentImageIndex ? "border-emerald-500" : "border-emerald-200"
-                        }`}
-                      >
-                        <img
-                          src={image || "/placeholder.svg"}
-                          alt={`${product.productName} ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
+                  <div className="p-6">
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      {images.map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-3 transition-all duration-200 ${
+                            index === currentImageIndex
+                              ? "border-emerald-500 shadow-lg scale-105"
+                              : "border-emerald-200 hover:border-emerald-300"
+                          }`}
+                        >
+                          <img
+                            src={image || "/placeholder.svg"}
+                            alt={`${product.productName} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 h-96 flex items-center justify-center">
-                <Store className="w-16 h-16 text-emerald-300" />
+              <div className="bg-white rounded-3xl shadow-xl border border-emerald-100 h-[500px] flex items-center justify-center">
+                <div className="text-center">
+                  <Store className="w-20 h-20 text-emerald-300 mx-auto mb-4" />
+                  <p className="text-emerald-600 font-medium">
+                    No images available
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Product Details */}
           <div className="space-y-6">
-            {/* Basic Info */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-emerald-100">
-              <h1 className="text-3xl font-bold text-emerald-800 mb-2">{product.productName}</h1>
-              <div className="flex items-center gap-4 mb-4">
-                <span className="text-3xl font-bold text-emerald-600">₹{product.cost}</span>
-                <div className="flex items-center gap-1 text-emerald-600">
-                  <MapPin className="w-4 h-4" />
-                  {distance.toFixed(1)} km away
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-emerald-100 sticky top-24">
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-3xl font-bold text-emerald-800 mb-3 leading-tight">
+                    {product.productName}
+                  </h1>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-4xl font-bold text-emerald-600">
+                      ₹{product.cost?.toLocaleString()}
+                    </span>
+                    <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                      <MapPin className="w-4 h-4" />
+                      <span className="font-medium">
+                        {distance.toFixed(1)} km away
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-emerald-700 leading-relaxed text-lg">
+                    {product.description}
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-emerald-100">
+                  <a
+                    href={`tel:${merchant?.phone}`}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 px-6 rounded-2xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 flex items-center justify-center gap-3 text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <Phone className="w-6 h-6" />
+                    Contact Merchant
+                  </a>
                 </div>
               </div>
-              <p className="text-emerald-700 leading-relaxed">{product.description}</p>
-            </div>
-
-            {/* Merchant Info */}
-            {merchant && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-emerald-100">
-                <h3 className="text-xl font-bold text-emerald-800 mb-4 flex items-center gap-2">
-                  <Store className="w-5 h-5" />
-                  Business Information
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-emerald-600">Business Name</p>
-                    <p className="font-medium text-emerald-800">{merchant.businessName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-emerald-600">Category</p>
-                    <p className="font-medium text-emerald-800 capitalize">{merchant.businessType}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-emerald-600">Location</p>
-                    <p className="font-medium text-emerald-800">{merchant.businessLocation}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-emerald-600">Contact</p>
-                    <a
-                      href={`tel:${merchant.phone}`}
-                      className="font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-                    >
-                      <Phone className="w-4 h-4" />
-                      {merchant.phone}
-                    </a>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Contact Button */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-emerald-100">
-              <a
-                href={`tel:${merchant?.phone}`}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 px-6 rounded-xl font-medium hover:from-emerald-700 hover:to-teal-700 transition-all flex items-center justify-center gap-2 text-lg"
-              >
-                <Phone className="w-5 h-5" />
-                Contact Merchant
-              </a>
             </div>
           </div>
         </div>
 
-        {/* Map */}
-        {merchant && merchant.lat && merchant.lng && userLocation && (
-          <div className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-emerald-100">
-            <div className="p-4 border-b border-emerald-100">
-              <h3 className="font-bold text-emerald-800 flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Location
+        {merchant && (
+          <div className="mt-12">
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-emerald-100">
+              <h3 className="text-2xl font-bold text-emerald-800 mb-6 flex items-center gap-3">
+                <div className="bg-emerald-100 p-2 rounded-xl">
+                  <Store className="w-6 h-6 text-emerald-600" />
+                </div>
+                Business Information
               </h3>
-            </div>
-            <div className="h-96 relative">
-              <iframe
-                title="Business Location"
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                scrolling="no"
-                marginHeight="0"
-                marginWidth="0"
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${Math.min(userLocation.lng, merchant.lng) - 0.01},${Math.min(userLocation.lat, merchant.lat) - 0.01},${Math.max(userLocation.lng, merchant.lng) + 0.01},${Math.max(userLocation.lat, merchant.lat) + 0.01}&layer=mapnik&marker=${merchant.lat},${merchant.lng}&marker=${userLocation.lat},${userLocation.lng}`}
-                style={{ border: "none" }}
-              />
-              {/* Map legend */}
-              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 border border-emerald-200">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-emerald-800">Business Location</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-emerald-800">Your Location</span>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-emerald-50 rounded-2xl p-6">
+                  <p className="text-sm font-medium text-emerald-600 mb-2">
+                    Business Name
+                  </p>
+                  <p className="font-bold text-emerald-800 text-lg">
+                    {merchant.businessName}
+                  </p>
+                </div>
+                <div className="bg-emerald-50 rounded-2xl p-6">
+                  <p className="text-sm font-medium text-emerald-600 mb-2">
+                    Category
+                  </p>
+                  <p className="font-bold text-emerald-800 text-lg capitalize">
+                    {merchant.businessType}
+                  </p>
+                </div>
+                <div className="bg-emerald-50 rounded-2xl p-6">
+                  <p className="text-sm font-medium text-emerald-600 mb-2">
+                    Location
+                  </p>
+                  <p className="font-bold text-emerald-800 text-lg">
+                    {merchant.businessLocation}
+                  </p>
+                </div>
+                <div className="bg-emerald-50 rounded-2xl p-6">
+                  <p className="text-sm font-medium text-emerald-600 mb-2">
+                    Contact
+                  </p>
+                  <a
+                    href={`tel:${merchant.phone}`}
+                    className="font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-2 text-lg transition-colors duration-200"
+                  >
+                    <Phone className="w-5 h-5" />
+                    {merchant.phone}
+                  </a>
                 </div>
               </div>
             </div>
           </div>
         )}
+
+        {merchant && merchant.lat && merchant.lng && userLocation && (
+          <div className="mt-12 bg-white rounded-3xl shadow-xl overflow-hidden border border-emerald-100">
+            <div className="p-6 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50">
+              <h3 className="text-2xl font-bold text-emerald-800 flex items-center gap-3">
+                <div className="bg-emerald-100 p-2 rounded-xl">
+                  <MapPin className="w-6 h-6 text-emerald-600" />
+                </div>
+                Location & Directions
+              </h3>
+              <p className="text-emerald-600 mt-2">
+                Find the exact location of this business and get directions
+              </p>
+            </div>
+            <div className="h-[400px]">
+              <MapContainer
+                center={[merchant.lat, merchant.lng]}
+                zoom={13}
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                />
+                <Marker
+                  position={[merchant.lat, merchant.lng]}
+                  icon={businessIcon}
+                >
+                  <Popup className="font-medium">
+                    <div className="text-center">
+                      <p className="font-bold text-emerald-800">
+                        {merchant.businessName}
+                      </p>
+                      <p className="text-emerald-600">
+                        {merchant.businessLocation}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+                <Marker
+                  position={[userLocation.lat, userLocation.lng]}
+                  icon={userIcon}
+                >
+                  <Popup className="font-medium">
+                    <div className="text-center">
+                      <p className="font-bold text-emerald-800">
+                        Your Location
+                      </p>
+                      <p className="text-emerald-600">
+                        {distance.toFixed(1)} km from business
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+                <MapLegend />
+              </MapContainer>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ProductDetailPage
+export default ProductDetailPage;
