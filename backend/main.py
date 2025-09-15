@@ -5,7 +5,7 @@ Flask API version for website integration
 Required packages:
 pip install flask ortools pandas numpy geopy
 """
-
+import os
 import math
 import datetime
 import json
@@ -19,11 +19,12 @@ from geopy.distance import geodesic
 from functools import lru_cache
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-
+from groq import Groq
+from dotenv import load_dotenv
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend integration
@@ -678,6 +679,61 @@ def get_options():
             'status': 'error',
             'message': f'Failed to fetch options: {str(e)}'
         }), 500
+
+
+# Initialize Groq client with your API key
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        data = request.get_json(force=True)
+        user_message = data.get("message", "")
+        
+        if not user_message:
+            return jsonify({"error": "Message is required"}), 400
+        
+        # Create chat completion with Groq
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Using Llama model instead of OpenAI
+            messages=[
+                {
+                    "role": "system", 
+                    "content": """You are a multilingual travel assistant for Jharkhand, India. 
+                    Answer concisely but include key facts (history, best season, transport, local food). 
+                    If user's language is not Hindi or English, detect and reply in that language.
+                    When giving places, add short lat/long or nearest city for map use.
+                    Focus on Jharkhand's attractions like:
+                    - Waterfalls: Hundru Falls, Dassam Falls, Jonha Falls
+                    - Hills: Parasnath Hill, Netarhat, Tagore Hill
+                    - Wildlife: Betla National Park, Dalma Wildlife Sanctuary
+                    - Tribal culture: Santhal, Munda, Oraon tribes
+                    - Festivals: Sarhul, Karma, Tusu
+                    - Cities: Ranchi, Jamshedpur, Dhanbad, Bokaro
+                    """
+                },
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        # Extract response content
+        bot_response = completion.choices[0].message.content
+        
+        return jsonify({"response": bot_response})
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return jsonify({
+            "response": "I'm having trouble processing your request right now. Please try asking about Jharkhand's waterfalls, trekking spots, or tribal culture."
+        }), 500
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "healthy", "service": "Jharkhand Travel Chatbot"})
+
+
 
 # --------------------
 # Main Application Entry Point

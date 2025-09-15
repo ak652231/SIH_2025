@@ -142,7 +142,7 @@ const TourDetailPage = ({ params }) => {
               The tour you're looking for doesn't exist or has been removed.
             </p>
             <button
-              onClick={() => router.push("/tours")}
+              onClick={() => router.push("/tour-guide")}
               className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 flex items-center gap-2 mx-auto"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -161,7 +161,7 @@ const TourDetailPage = ({ params }) => {
       <div className="bg-white/90 backdrop-blur-md border-b border-emerald-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
-            onClick={() => router.push("/tours")}
+            onClick={() => router.push("/tour-guide")}
             className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors duration-200 font-medium group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />

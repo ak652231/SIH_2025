@@ -1,3 +1,5 @@
+// src/app/layout.tsx
+
 import type React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -5,6 +7,8 @@ import "./globals.css";
 import { NavbarProvider } from "@/components/NavbarContext";
 import Providers from "./providers";
 import { Toaster } from "@/components/ui/sonner";
+import { Suspense } from "react"; // <-- 1. IMPORT SUSPENSE
+import { PageWrapper } from "@/components/chatbot/page-wrapper"; // <-- 2. IMPORT PAGEWRAPPER
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +36,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <NavbarProvider>{children}</NavbarProvider>
+          {/* 3. WRAP YOUR EXISTING CONTENT WITH SUSPENSE AND PAGEWRAPPER */}
+          <Suspense fallback={<div>Loading...</div>}>
+            <PageWrapper>
+              <NavbarProvider>{children}</NavbarProvider>
+            </PageWrapper>
+          </Suspense>
         </Providers>
         <Toaster
           theme="light"
