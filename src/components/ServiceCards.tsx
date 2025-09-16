@@ -142,7 +142,7 @@ const ServiceCards: React.FC = () => {
           <div id="pin-landing-spot" className="relative h-16 w-16 z-20" />
           <div className="z-10">
             <span className="text-green-1 font-poppins font-bold text-xl tracking-wide">
-              JharTour
+              Namaste Jharkhand
             </span>
           </div>
         </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { memo } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import Image from "next/image";
 // Fonts
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -66,7 +67,7 @@ const Navbar = memo(function Navbar() {
             <Link
               href="/"
               prefetch={false}
-              aria-label="JharTour - Home"
+              aria-label="Namaste Jharkhand - Home"
               className="flex-[1_1_0%] min-w-40"
             >
               <div className="relative z-10 group select-none">
@@ -79,7 +80,7 @@ const Navbar = memo(function Navbar() {
                 >
                   {/* brand */}
                   <span className="relative z-10 font-poppins font-bold text-sm tracking-tight truncate">
-                    JharTour
+                    <img src="./public/images/logo.jpg" alt="" />
                   </span>
                   {/* windows */}
                   <div
@@ -156,7 +157,7 @@ const Navbar = memo(function Navbar() {
             ))}
 
             {/* Caboose (Sign In) - keep red CTA feel */}
-            
+
             <div
               className="relative w-px mx-2 self-center h-0.5 bg-gray-300 rounded shrink-0"
               aria-hidden="true"
@@ -169,84 +170,86 @@ const Navbar = memo(function Navbar() {
             >
               <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-0.5 w-6 bg-gray-400 rounded" />
             </div>
-            {user? (
+            {user ? (
               <Link
-              href="/"
-              prefetch={false}
-              aria-label="Sign In"
-              className="flex-[1_1_0%] min-w-0"
-            >
-              <div className="relative z-10 group select-none">
-                {/* caboose body (red to preserve original CTA color) */}
-                <div className="relative isolate bg-green-1 text-white h-12 pl-5 pr-8 rounded-r-[14px] shadow-sm flex items-center">
-                  <button onClick={handleLogout} className="relative z-10 font-poppins font-medium text-sm truncate">
-                    Logout
-                  </button>
-                  {/* windows */}
-                  <div
-                    className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1.5 pointer-events-none"
-                    aria-hidden="true"
-                  >
-                    <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
-                    <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
+                href="/"
+                prefetch={false}
+                aria-label="Sign In"
+                className="flex-[1_1_0%] min-w-0"
+              >
+                <div className="relative z-10 group select-none">
+                  {/* caboose body (red to preserve original CTA color) */}
+                  <div className="relative isolate bg-green-1 text-white h-12 pl-5 pr-8 rounded-r-[14px] shadow-sm flex items-center">
+                    <button
+                      onClick={handleLogout}
+                      className="relative z-10 font-poppins font-medium text-sm truncate"
+                    >
+                      Logout
+                    </button>
+                    {/* windows */}
+                    <div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1.5 pointer-events-none"
+                      aria-hidden="true"
+                    >
+                      <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
+                      <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
+                    </div>
+                    {/* tail plate */}
+                    <div
+                      className="absolute -right-3 top-1/2 -translate-y-1/2 w-2 h-6 bg-white/90 rounded-sm pointer-events-none"
+                      aria-hidden="true"
+                    />
                   </div>
-                  {/* tail plate */}
+                  {/* wheels */}
                   <div
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-2 h-6 bg-white/90 rounded-sm pointer-events-none"
+                    className="absolute -bottom-2 left-4 w-2.5 h-2.5 bg-black/70 rounded-full"
+                    aria-hidden="true"
+                  />
+                  <div
+                    className="absolute -bottom-2 right-4 w-2.5 h-2.5 bg-black/70 rounded-full"
                     aria-hidden="true"
                   />
                 </div>
-                {/* wheels */}
-                <div
-                  className="absolute -bottom-2 left-4 w-2.5 h-2.5 bg-black/70 rounded-full"
-                  aria-hidden="true"
-                />
-                <div
-                  className="absolute -bottom-2 right-4 w-2.5 h-2.5 bg-black/70 rounded-full"
-                  aria-hidden="true"
-                />
-              </div>
-            </Link>
-              
-              ):<Link
-              href="/auth"
-              prefetch={false}
-              aria-label="Sign In"
-              className="flex-[1_1_0%] min-w-0"
-            >
-              <div className="relative z-10 group select-none">
-                {/* caboose body (red to preserve original CTA color) */}
-                <div className="relative isolate bg-green-1 text-white h-12 pl-5 pr-8 rounded-r-[14px] shadow-sm flex items-center">
-                  <span className="relative z-10 font-poppins font-medium text-sm truncate">
-                    Sign In
-                  </span>
-                  {/* windows */}
-                  <div
-                    className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1.5 pointer-events-none"
-                    aria-hidden="true"
-                  >
-                    <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
-                    <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
+              </Link>
+            ) : (
+              <Link
+                href="/auth"
+                prefetch={false}
+                aria-label="Sign In"
+                className="flex-[1_1_0%] min-w-0"
+              >
+                <div className="relative z-10 group select-none">
+                  {/* caboose body (red to preserve original CTA color) */}
+                  <div className="relative isolate bg-green-1 text-white h-12 pl-5 pr-8 rounded-r-[14px] shadow-sm flex items-center">
+                    <span className="relative z-10 font-poppins font-medium text-sm truncate">
+                      Sign In
+                    </span>
+                    {/* windows */}
+                    <div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1.5 pointer-events-none"
+                      aria-hidden="true"
+                    >
+                      <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
+                      <span className="w-3.5 h-2.5 bg-white/90 rounded-[3px]" />
+                    </div>
+                    {/* tail plate */}
+                    <div
+                      className="absolute -right-3 top-1/2 -translate-y-1/2 w-2 h-6 bg-white/90 rounded-sm pointer-events-none"
+                      aria-hidden="true"
+                    />
                   </div>
-                  {/* tail plate */}
+                  {/* wheels */}
                   <div
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-2 h-6 bg-white/90 rounded-sm pointer-events-none"
+                    className="absolute -bottom-2 left-4 w-2.5 h-2.5 bg-black/70 rounded-full"
+                    aria-hidden="true"
+                  />
+                  <div
+                    className="absolute -bottom-2 right-4 w-2.5 h-2.5 bg-black/70 rounded-full"
                     aria-hidden="true"
                   />
                 </div>
-                {/* wheels */}
-                <div
-                  className="absolute -bottom-2 left-4 w-2.5 h-2.5 bg-black/70 rounded-full"
-                  aria-hidden="true"
-                />
-                <div
-                  className="absolute -bottom-2 right-4 w-2.5 h-2.5 bg-black/70 rounded-full"
-                  aria-hidden="true"
-                />
-              </div>
-            </Link>
-            }
-            
+              </Link>
+            )}
           </div>
         </div>
       </nav>

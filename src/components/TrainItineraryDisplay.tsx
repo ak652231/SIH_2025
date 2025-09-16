@@ -128,10 +128,10 @@ export default function TrainItineraryDisplay({
 
                 {/* Main body */}
                 <div className="absolute left-20 top-0 right-0 h-full bg-gradient-to-b from-blue-500 to-blue-700 rounded-r-lg">
-                  {/* JharTour branding */}
+                  {/* Namaste Jharkhand branding */}
                   <div className="absolute left-8 top-1/2 transform -translate-y-1/2">
                     <h1 className="text-white font-bold text-4xl tracking-wider drop-shadow-lg">
-                      JharTour
+                      Namaste Jharkhand
                     </h1>
                     <div className="text-blue-200 text-sm font-medium">
                       Express Journey
@@ -180,7 +180,7 @@ export default function TrainItineraryDisplay({
               Preparing Your Jharkhand Journey
             </h2>
             <p className="text-slate-300 text-lg">
-              The JharTour Express is arriving at the platform...
+              The Namaste Jharkhand Express is arriving at the platform...
             </p>
             <div className="mt-6 flex justify-center">
               <div className="flex gap-2">
@@ -217,10 +217,10 @@ export default function TrainItineraryDisplay({
 
           {/* Main body */}
           <div className="absolute left-24 top-0 right-0 h-full bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 rounded-r-lg">
-            {/* JharTour branding */}
+            {/* Namaste Jharkhand branding */}
             <div className="absolute left-12 top-1/2 transform -translate-y-1/2">
               <h1 className="text-white font-bold text-5xl tracking-wider drop-shadow-2xl">
-                JharTour
+                Namaste Jharkhand
               </h1>
               <div className="text-blue-200 text-lg font-medium mt-1">
                 Express Journey

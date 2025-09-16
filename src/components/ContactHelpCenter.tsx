@@ -35,7 +35,7 @@ const ContactHelpCenter = () => {
     {
       question: "Can I book verified guides and homestays?",
       answer:
-        "Yes. JharTour uses blockchain-backed verification and digital certificates for guides and local stays. Look for the Verified badge on provider profiles before booking.",
+        "Yes. Namaste Jharkhand uses blockchain-backed verification and digital certificates for guides and local stays. Look for the Verified badge on provider profiles before booking.",
     },
     {
       question: "Do you support multiple languages?",
@@ -57,7 +57,7 @@ const ContactHelpCenter = () => {
     },
     {
       title: "Email Support",
-      contact: "support@jhartour.org",
+      contact: "support@namastejharkhand.org",
       icon: <Mail className="h-5 w-5 text-white" />,
     },
     {

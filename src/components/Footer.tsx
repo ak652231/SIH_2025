@@ -86,7 +86,7 @@ const Footer = () => {
             <div className="mb-6">
               <Link href="/" className="flex items-center">
                 <span className="font-poppins text-[#1e7564]green-1 font-bold text-2xl tracking-tight">
-                  JharTour
+                  Namaste Jharkhand
                 </span>
               </Link>
             </div>
@@ -192,7 +192,7 @@ const Footer = () => {
         {/* Bottom */}
         <div className="mt-12 pt-6 border-t border-red-200 flex flex-col md:flex-row justify-between items-center">
           <p className="font-montserrat text-gray-600 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} JharTour. All rights reserved.
+            &copy; {new Date().getFullYear()} Namaste Jharkhand. All rights reserved.
           </p>
           <div className="flex space-x-6">
             <Link
