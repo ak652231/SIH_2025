@@ -1,86 +1,97 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { ChevronLeft, ChevronRight, MapPin, Clock, DollarSign, Star } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useRef } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Clock,
+  DollarSign,
+  Star,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface POI {
-  name: string
-  category: string
-  rating: number
-  cost: number
-  time_required: number
-  description: string
+  name: string;
+  category: string;
+  rating: number;
+  cost: number;
+  time_required: number;
+  description: string;
 }
 
 interface DayPlan {
-  day: number
-  date: string
-  pois: POI[]
-  total_cost: number
-  total_time: number
+  day: number;
+  date: string;
+  pois: POI[];
+  total_cost: number;
+  total_time: number;
 }
 
 interface ItineraryData {
   trip_summary: {
-    total_days: number
-    total_destinations: number
-    total_cost: number
-  }
-  daily_plans: DayPlan[]
+    total_days: number;
+    total_destinations: number;
+    total_cost: number;
+  };
+  daily_plans: DayPlan[];
 }
 
 interface TrainItineraryDisplayProps {
-  itinerary: ItineraryData | null
-  onBack: () => void
-  isLoading?: boolean
+  itinerary: ItineraryData | null;
+  onBack: () => void;
+  isLoading?: boolean;
 }
 
+export default function TrainItineraryDisplay({
+  itinerary,
+  onBack,
+  isLoading = false,
+}: TrainItineraryDisplayProps) {
+  const displayItinerary = itinerary || MOCK_ITINERARY;
 
-export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = false }: TrainItineraryDisplayProps) {
-  const displayItinerary = itinerary || MOCK_ITINERARY
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [isFlickerComplete, setIsFlickerComplete] = useState(false);
+  const [flickerPosition, setFlickerPosition] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const trainRef = useRef<HTMLDivElement>(null);
 
-  const [scrollPosition, setScrollPosition] = useState(0)
-  const [isFlickerComplete, setIsFlickerComplete] = useState(false)
-  const [flickerPosition, setFlickerPosition] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const trainRef = useRef<HTMLDivElement>(null)
-
-  const totalCoaches = displayItinerary.daily_plans.length + 1 // +1 for engine
-  const maxScroll = (totalCoaches - 1) * 100
+  const totalCoaches = displayItinerary.daily_plans.length + 1; // +1 for engine
+  const maxScroll = (totalCoaches - 1) * 100;
 
   useEffect(() => {
     const flickerInterval = setInterval(() => {
       setFlickerPosition((prev) => {
         if (prev >= 100) {
-          clearInterval(flickerInterval)
-          setTimeout(() => setIsFlickerComplete(true), 500)
-          return 100
+          clearInterval(flickerInterval);
+          setTimeout(() => setIsFlickerComplete(true), 500);
+          return 100;
         }
-        return prev + 3
-      })
-    }, 80)
+        return prev + 3;
+      });
+    }, 80);
 
-    return () => clearInterval(flickerInterval)
-  }, [])
+    return () => clearInterval(flickerInterval);
+  }, []);
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-      e.preventDefault()
+      e.preventDefault();
 
-      const scrollSpeed = 15
-      const newPosition = scrollPosition + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed)
-      const clampedPosition = Math.max(0, Math.min(maxScroll, newPosition))
+      const scrollSpeed = 15;
+      const newPosition =
+        scrollPosition + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed);
+      const clampedPosition = Math.max(0, Math.min(maxScroll, newPosition));
 
-      setScrollPosition(clampedPosition)
-    }
+      setScrollPosition(clampedPosition);
+    };
 
-    const container = containerRef.current
+    const container = containerRef.current;
     if (container && isFlickerComplete) {
-      container.addEventListener("wheel", handleWheel, { passive: false })
-      return () => container.removeEventListener("wheel", handleWheel)
+      container.addEventListener("wheel", handleWheel, { passive: false });
+      return () => container.removeEventListener("wheel", handleWheel);
     }
-  }, [scrollPosition, maxScroll, isFlickerComplete])
+  }, [scrollPosition, maxScroll, isFlickerComplete]);
 
   if (isLoading || !isFlickerComplete) {
     return (
@@ -99,8 +110,14 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
                 className="absolute -left-40 top-1/2 transform -translate-y-1/2 h-8 bg-gradient-to-r from-yellow-300/90 via-yellow-200/70 to-transparent rounded-full transition-all duration-100"
                 style={{
                   width: `${flickerPosition * 1.6}px`,
-                  opacity: flickerPosition < 100 ? 0.3 + Math.sin(flickerPosition * 0.3) * 0.4 : 0.9,
-                  boxShadow: flickerPosition > 50 ? "0 0 30px rgba(255, 255, 0, 0.5)" : "none",
+                  opacity:
+                    flickerPosition < 100
+                      ? 0.3 + Math.sin(flickerPosition * 0.3) * 0.4
+                      : 0.9,
+                  boxShadow:
+                    flickerPosition > 50
+                      ? "0 0 30px rgba(255, 255, 0, 0.5)"
+                      : "none",
                 }}
               />
 
@@ -113,8 +130,12 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
                 <div className="absolute left-20 top-0 right-0 h-full bg-gradient-to-b from-blue-500 to-blue-700 rounded-r-lg">
                   {/* JharTour branding */}
                   <div className="absolute left-8 top-1/2 transform -translate-y-1/2">
-                    <h1 className="text-white font-bold text-4xl tracking-wider drop-shadow-lg">JharTour</h1>
-                    <div className="text-blue-200 text-sm font-medium">Express Journey</div>
+                    <h1 className="text-white font-bold text-4xl tracking-wider drop-shadow-lg">
+                      JharTour
+                    </h1>
+                    <div className="text-blue-200 text-sm font-medium">
+                      Express Journey
+                    </div>
                   </div>
 
                   {/* Realistic windows */}
@@ -142,7 +163,10 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
                 {/* Wheels */}
                 <div className="absolute -bottom-6 left-16 flex gap-8">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="w-8 h-8 bg-slate-900 rounded-full border-4 border-slate-700 shadow-lg">
+                    <div
+                      key={i}
+                      className="w-8 h-8 bg-slate-900 rounded-full border-4 border-slate-700 shadow-lg"
+                    >
                       <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 rounded-full"></div>
                     </div>
                   ))}
@@ -155,7 +179,9 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
             <h2 className="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
               Preparing Your Jharkhand Journey
             </h2>
-            <p className="text-slate-300 text-lg">The JharTour Express is arriving at the platform...</p>
+            <p className="text-slate-300 text-lg">
+              The JharTour Express is arriving at the platform...
+            </p>
             <div className="mt-6 flex justify-center">
               <div className="flex gap-2">
                 {[...Array(3)].map((_, i) => (
@@ -175,7 +201,7 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-500 to-transparent animate-pulse"></div>
         </div>
       </div>
-    )
+    );
   }
 
   const renderEngine = () => (
@@ -193,8 +219,12 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
           <div className="absolute left-24 top-0 right-0 h-full bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 rounded-r-lg">
             {/* JharTour branding */}
             <div className="absolute left-12 top-1/2 transform -translate-y-1/2">
-              <h1 className="text-white font-bold text-5xl tracking-wider drop-shadow-2xl">JharTour</h1>
-              <div className="text-blue-200 text-lg font-medium mt-1">Express Journey</div>
+              <h1 className="text-white font-bold text-5xl tracking-wider drop-shadow-2xl">
+                JharTour
+              </h1>
+              <div className="text-blue-200 text-lg font-medium mt-1">
+                Express Journey
+              </div>
               <div className="text-blue-300 text-sm">Discover Jharkhand</div>
             </div>
 
@@ -240,7 +270,7 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderDayCoach = (dayPlan: DayPlan, index: number) => (
     <div className="w-full h-screen flex items-center justify-center px-12 relative">
@@ -257,7 +287,9 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
                 <Calendar className="h-8 w-8 text-emerald-600" />
               </div>
               <div>
-                <h2 className="text-white font-bold text-4xl drop-shadow-lg">Day {dayPlan.day}</h2>
+                <h2 className="text-white font-bold text-4xl drop-shadow-lg">
+                  Day {dayPlan.day}
+                </h2>
                 <p className="text-emerald-100 text-xl">
                   {new Date(dayPlan.date).toLocaleDateString("en-US", {
                     weekday: "long",
@@ -274,21 +306,27 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
               <div className="text-center bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-2 justify-center">
                   <Clock className="h-6 w-6" />
-                  <span className="font-bold text-2xl">{Math.round(dayPlan.total_time)}h</span>
+                  <span className="font-bold text-2xl">
+                    {Math.round(dayPlan.total_time)}h
+                  </span>
                 </div>
                 <p className="text-emerald-100 font-medium">Duration</p>
               </div>
               <div className="text-center bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-2 justify-center">
                   <DollarSign className="h-6 w-6" />
-                  <span className="font-bold text-2xl">₹{dayPlan.total_cost}</span>
+                  <span className="font-bold text-2xl">
+                    ₹{dayPlan.total_cost}
+                  </span>
                 </div>
                 <p className="text-emerald-100 font-medium">Total Cost</p>
               </div>
               <div className="text-center bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-2 justify-center">
                   <MapPin className="h-6 w-6" />
-                  <span className="font-bold text-2xl">{dayPlan.pois.length}</span>
+                  <span className="font-bold text-2xl">
+                    {dayPlan.pois.length}
+                  </span>
                 </div>
                 <p className="text-emerald-100 font-medium">Places</p>
               </div>
@@ -310,7 +348,9 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
                   </div>
                 </div>
 
-                <p className="text-emerald-100 text-base mb-4 leading-relaxed">{poi.description}</p>
+                <p className="text-emerald-100 text-base mb-4 leading-relaxed">
+                  {poi.description}
+                </p>
 
                 <div className="flex items-center justify-between">
                   <span className="bg-emerald-800 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
@@ -360,7 +400,7 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
         </div>
       </div>
     </div>
-  )
+  );
 
   return (
     <div
@@ -376,7 +416,9 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
               style={{ width: `${(scrollPosition / maxScroll) * 100}%` }}
             ></div>
           </div>
-          <span className="text-xs">{Math.round((scrollPosition / maxScroll) * 100)}%</span>
+          <span className="text-xs">
+            {Math.round((scrollPosition / maxScroll) * 100)}%
+          </span>
         </div>
       </div>
 
@@ -423,5 +465,5 @@ export default function TrainItineraryDisplay({ itinerary, onBack, isLoading = f
         </div>
       </div>
     </div>
-  )
+  );
 }

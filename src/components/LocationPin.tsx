@@ -3,6 +3,7 @@
 import type React from "react";
 import { useRef } from "react";
 import Link from "next/link";
+import { Camera, Compass, Mountain } from "lucide-react";
 
 const LocationPin: React.FC = () => {
   const pinRef = useRef<HTMLDivElement>(null);
@@ -10,6 +11,13 @@ const LocationPin: React.FC = () => {
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100">
       {/* Large Pin SVG with modern gradient */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full opacity-20 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-teal-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
+        <Mountain className="absolute top-20 right-20 w-16 h-16 text-emerald-300 opacity-30" />
+        <Camera className="absolute bottom-20 left-20 w-12 h-12 text-teal-300 opacity-30" />
+        <Compass className="absolute top-1/2 left-10 w-14 h-14 text-emerald-400 opacity-20" />
+      </div>
       <div
         id="main-location-pin"
         ref={pinRef}

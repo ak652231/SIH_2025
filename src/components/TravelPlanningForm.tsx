@@ -66,6 +66,8 @@ export default function TravelPlanningForm({
     accessibility_needs: false,
     family_trip: false,
     must_visit: [],
+    home_city: "Mumbai",
+    destination_city: "Ranchi",
   });
 
   const [locationSuggestions, setLocationSuggestions] = useState([]);
@@ -308,13 +310,21 @@ export default function TravelPlanningForm({
     }
 
     const processedData = {
-      ...formData,
+      num_days: Number.parseInt(formData.num_days) || 5,
+      budget: Number.parseFloat(formData.budget) || 15000,
+      start_date: formData.start_date || new Date().toISOString().split("T")[0],
+      home_city: formData.home_city,
       base_location:
         formData.base_location_lat && formData.base_location_lng
           ? [formData.base_location_lat, formData.base_location_lng]
-          : [23.36, 85.33],
-      num_days: Number.parseInt(formData.num_days) || 5,
-      budget: Number.parseFloat(formData.budget) || 15000,
+          : null,
+      destination_city: formData.destination_city,
+      interests: formData.interests,
+      family_trip: formData.family_trip,
+      accessibility_needs: formData.accessibility_needs,
+      transport_mode: formData.transport_mode || "car",
+      pace: formData.pace || "moderate",
+      must_visit: formData.must_visit,
     };
     console.log("[v0] Calling onSubmit with data:", processedData);
     onSubmit(processedData);
@@ -387,6 +397,7 @@ export default function TravelPlanningForm({
                   <SelectItem value="bus">🚌 Bus</SelectItem>
                   <SelectItem value="train">🚂 Train</SelectItem>
                   <SelectItem value="bike">🏍️ Bike</SelectItem>
+                  <SelectItem value="auto">🛺 Auto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -431,7 +442,7 @@ export default function TravelPlanningForm({
                 {/* Loading indicator */}
                 {isLocationLoading && (
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-500"></div>
                   </div>
                 )}
 
@@ -442,13 +453,13 @@ export default function TravelPlanningForm({
                       locationSuggestions.map((suggestion) => (
                         <div
                           key={suggestion.id}
-                          className="px-4 py-2 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-0"
+                          className="px-4 py-2 hover:bg-teal-50 cursor-pointer border-b border-gray-100 last:border-0"
                           onClick={() =>
                             handleLocationSuggestionClick(suggestion)
                           }
                         >
                           <div className="flex items-start">
-                            <MapPin className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                            <MapPin className="h-5 w-5 text-teal-500 mr-2 mt-0.5 flex-shrink-0" />
                             <div>
                               <div className="text-black text-sm font-medium">
                                 {suggestion.shortName}
@@ -479,7 +490,7 @@ export default function TravelPlanningForm({
                           {recentLocationSearches.map((search) => (
                             <div
                               key={search.id}
-                              className="px-4 py-2 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-0 flex items-start"
+                              className="px-4 py-2 hover:bg-teal-50 cursor-pointer border-b border-gray-100 last:border-0 flex items-start"
                               onClick={() =>
                                 handleLocationSuggestionClick(search)
                               }
@@ -516,8 +527,14 @@ export default function TravelPlanningForm({
                   "culture",
                   "temple",
                   "adventure",
-                  "food",
                   "history",
+                  "waterfall",
+                  "wildlife",
+                  "pilgrimage",
+                  "unesco",
+                  "viewpoint",
+                  "hill_station",
+                  "hot_springs",
                 ].map((interest) => (
                   <div key={interest} className="flex items-center space-x-2">
                     <Checkbox
@@ -538,7 +555,7 @@ export default function TravelPlanningForm({
                       }}
                     />
                     <Label htmlFor={interest} className="capitalize">
-                      {interest}
+                      {interest.replace("_", " ")}
                     </Label>
                   </div>
                 ))}
@@ -550,33 +567,34 @@ export default function TravelPlanningForm({
               </Label>
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  "betla_np",
-                  "bodh_gaya",
-                  "ranchi",
-                  "jamshedpur",
-                  "deoghar",
+                  { id: "betla_np", name: "Betla National Park" },
+                  { id: "hundru_falls", name: "Hundru Falls" },
+                  { id: "deoghar_temple", name: "Baidyanath Temple" },
+                  { id: "parasnath_hills", name: "Parasnath Hills" },
+                  { id: "netarhat", name: "Netarhat Hills" },
+                  { id: "bodh_gaya", name: "Bodh Gaya" },
+                  { id: "dalma_sanctuary", name: "Dalma Wildlife Sanctuary" },
+                  { id: "jonha_falls", name: "Jonha Falls" },
                 ].map((place) => (
-                  <div key={place} className="flex items-center space-x-2">
+                  <div key={place.id} className="flex items-center space-x-2">
                     <Checkbox
-                      id={place}
-                      checked={formData.must_visit.includes(place)}
+                      id={place.id}
+                      checked={formData.must_visit.includes(place.id)}
                       onCheckedChange={(checked) => {
                         if (checked) {
                           updateField("must_visit", [
                             ...formData.must_visit,
-                            place,
+                            place.id,
                           ]);
                         } else {
                           updateField(
                             "must_visit",
-                            formData.must_visit.filter((p) => p !== place)
+                            formData.must_visit.filter((p) => p !== place.id)
                           );
                         }
                       }}
                     />
-                    <Label htmlFor={place} className="capitalize">
-                      {place.replace("_", " ")}
-                    </Label>
+                    <Label htmlFor={place.id}>{place.name}</Label>
                   </div>
                 ))}
               </div>
@@ -720,11 +738,11 @@ export default function TravelPlanningForm({
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border-2 border-red-600 p-8 min-h-[400px]">
+      <div className="bg-white rounded-lg border-2 border-teal-600 p-8 min-h-[400px]">
         <div className="flex items-center gap-3 mb-6">
           {(() => {
             const Icon = STATIONS[currentStation].icon;
-            return <Icon className="text-red-600" size={32} />;
+            return <Icon className="text-teal-600" size={32} />;
           })()}
           <h2 className="text-2xl font-bold text-gray-900">
             {STATIONS[currentStation].name}
@@ -748,7 +766,7 @@ export default function TravelPlanningForm({
           <Button
             onClick={handleSubmit}
             disabled={isAnimating || isLoading}
-            className="px-6 py-3 bg-red-600 hover:bg-red-700"
+            className="px-6 py-3 bg-teal-600 hover:bg-teal-700"
           >
             {isLoading ? (
               <>
@@ -763,7 +781,7 @@ export default function TravelPlanningForm({
           <Button
             onClick={nextStation}
             disabled={isAnimating || isLoading}
-            className="px-6 py-3 bg-red-600 hover:bg-red-700"
+            className="px-6 py-3 bg-teal-600 hover:bg-teal-700"
           >
             Next Milestone →
           </Button>
