@@ -1,4 +1,4 @@
-# Namaste Jharkhand (JharTour)
+# Namaste Jharkhand 
 
 AI-powered travel planning, marketplace, and community safety platform focused on Jharkhand, India.
 
