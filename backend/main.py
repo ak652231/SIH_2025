@@ -236,8 +236,8 @@ class TrainDataStorage:
                 "stops": [("NDLS", "16:10", "16:10"), ("BKSC", "08:00", "08:05"), ("RNC", "10:30", "10:30")]
             },
             {
-                "name": "Mumbai Mail (to Tatanagar)", "number": "12322",
-                "stops": [("CSMT", "21:30", "21:30"), ("TATA", "01:30", "01:30")]
+                "name": "Mumbai Mail (to Ranchi)", "number": "12322",
+                "stops": [("CSMT", "21:30", "21:30"), ("RNC", "01:30", "01:30")]
             },
             {
                 "name": "Kolkata-Ranchi Shatabdi", "number": "12019",

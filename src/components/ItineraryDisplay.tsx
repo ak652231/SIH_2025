@@ -44,6 +44,7 @@ interface ScheduleItem {
   travel_time?: number;
   travel_details?: string[];
   action?: string;
+  details?: string; // Added for arrival action details
 }
 
 interface ItineraryDay {
@@ -90,13 +91,27 @@ export default function ItineraryDisplay({
     });
   };
 
+  const getActualTransportMode = (travelDetails: string[]) => {
+    if (!travelDetails || travelDetails.length === 0) return "car";
+
+    const details = travelDetails.join(" ").toLowerCase();
+    if (details.includes("train") || details.includes("board at"))
+      return "train";
+    if (details.includes("bus")) return "bus";
+    if (details.includes("auto")) return "auto";
+    if (details.includes("bike")) return "bike";
+    if (details.includes("drive") || details.includes("car")) return "car";
+
+    return "car"; // default fallback
+  };
+
   const getTransportIcon = (mode: string) => {
     const icons = {
       car: "🚗",
       bus: "🚌",
       train: "🚂",
-      bike: "🏍️",
       auto: "🛺",
+      bike: "🏍️",
     };
     return icons[mode as keyof typeof icons] || "🚗";
   };
@@ -245,6 +260,11 @@ export default function ItineraryDisplay({
                                 ))}
                               </div>
                             )}
+                            {(item as any).details && (
+                              <div className="text-sm text-gray-600 mt-1">
+                                {(item as any).details}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -264,29 +284,25 @@ export default function ItineraryDisplay({
                           item.start_time!
                         )
                       : 0;
+
+                    const actualTransportMode = getActualTransportMode(
+                      item.travel_details || []
+                    );
                     const distance = showTravelSegment
-                      ? estimateDistance(
-                          travelTime,
-                          itinerary.user_preferences?.transport_mode || "car"
-                        )
+                      ? estimateDistance(travelTime, actualTransportMode)
                       : 0;
 
                     return (
                       <div key={index}>
-                        {showTravelSegment && travelTime > 0 && (
+                        {/* {showTravelSegment && travelTime > 0 && (
                           <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400 mb-4">
                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-lg">
-                              {getTransportIcon(
-                                itinerary.user_preferences?.transport_mode ||
-                                  "car"
-                              )}
+                              {getTransportIcon(actualTransportMode)}
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-4 text-sm">
                                 <div className="font-medium text-blue-800">
-                                  Travel by{" "}
-                                  {itinerary.user_preferences?.transport_mode ||
-                                    "car"}
+                                  Travel by {actualTransportMode}
                                 </div>
                                 <div className="flex items-center gap-1 text-blue-600">
                                   <Clock className="h-4 w-4" />
@@ -304,7 +320,7 @@ export default function ItineraryDisplay({
                               </div>
                             </div>
                           </div>
-                        )}
+                        )}  */}
 
                         <div className="flex gap-4 p-4 border rounded-lg hover:shadow-md transition-shadow">
                           <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-orange-100 rounded-lg flex items-center justify-center text-2xl">
@@ -366,22 +382,49 @@ export default function ItineraryDisplay({
                               </div>
                             </div>
 
-                            {/* Timing */}
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                <span>
-                                  {item.start_time} - {item.end_time}
-                                </span>
+                            {/* Timing and Travel Details */}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  <span>
+                                    {item.start_time} - {item.end_time}
+                                  </span>
+                                </div>
+                                {item.arrival_time && (
+                                  <div>Arrive: {item.arrival_time}</div>
+                                )}
+                                <div>
+                                  Duration:{" "}
+                                  {Math.floor((item.poi.duration || 0) / 60)}h{" "}
+                                  {(item.poi.duration || 0) % 60}m
+                                </div>
                               </div>
-                              {item.arrival_time && (
-                                <div>Arrive: {item.arrival_time}</div>
-                              )}
-                              <div>
-                                Duration:{" "}
-                                {Math.floor((item.poi.duration || 0) / 60)}h{" "}
-                                {(item.poi.duration || 0) % 60}m
-                              </div>
+
+                              {item.travel_details &&
+                                item.travel_details.length > 0 && (
+                                  <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-gray-300">
+                                    <div className="text-sm font-medium text-gray-700 mb-1">
+                                      Travel Instructions:
+                                    </div>
+                                    <div className="text-sm text-gray-600 space-y-1">
+                                      {item.travel_details.map((detail, i) => (
+                                        <div
+                                          key={i}
+                                          className={
+                                            detail.includes(
+                                              "No suitable train found"
+                                            )
+                                              ? "text-amber-600 font-medium"
+                                              : ""
+                                          }
+                                        >
+                                          {detail}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                             </div>
                           </div>
                         </div>
