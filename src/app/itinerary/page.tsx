@@ -60,7 +60,7 @@ export default function TravelFormPage() {
 
   if (pageState === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center">
+      <div className="min-h-screen pt-20 bg-gradient-to-b from-red-50 to-white flex items-center justify-center">
         <div className="text-center">
           <div className="mb-8">
             <Loader2 className="h-16 w-16 animate-spin mx-auto text-red-600" />
@@ -83,7 +83,7 @@ export default function TravelFormPage() {
 
   if (pageState === "error") {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white py-12">
+      <div className="min-h-screen pt-20 bg-gradient-to-b from-red-50 to-white py-12">
         <div className="container mx-auto max-w-2xl">
           <Alert className="mb-8">
             <AlertCircle className="h-4 w-4" />
@@ -116,7 +116,7 @@ export default function TravelFormPage() {
 
   if (pageState === "results" && itinerary) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white py-12">
+      <div className="min-h-screen pt-20 bg-gradient-to-b from-teal-50 to-white py-12">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full opacity-20 animate-pulse"></div>
           <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-teal-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
@@ -131,7 +131,7 @@ export default function TravelFormPage() {
 
   // Default form state
   return (
-    <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white py-12">
+    <div className="min-h-screen pt-20 bg-gradient-to-b from-teal-50 to-white py-12">
       <div className="container mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">

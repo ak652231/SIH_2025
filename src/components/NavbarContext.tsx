@@ -1,153 +1,166 @@
-"use client"
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react"
-import Cookies from "js-cookie"
-import io from "socket.io-client"
+"use client";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  ReactNode,
+} from "react";
+import Cookies from "js-cookie";
+import io from "socket.io-client";
 
 type NavbarContextType = {
-  isLogin: boolean
-  notificationCount: number
-  handleLogout: () => void
-  handleNotificationClick: () => void
-  userRole: string
-  policeName: string
-}
+  isLogin: boolean;
+  notificationCount: number;
+  handleLogout: () => void;
+  handleNotificationClick: () => void;
+  userRole: string;
+  policeName: string;
+};
 
-const NavbarContext = createContext<NavbarContextType | undefined>(undefined)
+const NavbarContext = createContext<NavbarContextType | undefined>(undefined);
 
 export function NavbarProvider({ children }: { children: ReactNode }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isLogin, setIsLogin] = useState(false)
-  const [notificationCount, setNotificationCount] = useState(0)
-  const socketRef = useRef(null)
-  const [userId, setUserId] = useState("")
-  const [userRole, setUserRole] = useState("")
-  const [policeName, setPoliceName] = useState("")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLogin, setIsLogin] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const socketRef = useRef(null);
+  const [userId, setUserId] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [policeName, setPoliceName] = useState("");
 
   const handleLogout = () => {
-    Cookies.remove("sessionToken", { path: "/" })
-    setIsLogin(false)
-    setNotificationCount(0)
-    
+    Cookies.remove("sessionToken", { path: "/" });
+    setIsLogin(false);
+    setNotificationCount(0);
+
     if (socketRef.current) {
-      socketRef.current.disconnect()
-      socketRef.current = null
+      socketRef.current.disconnect();
+      socketRef.current = null;
     }
-    
+
     if (userRole === "police") {
-      window.location.href = "/auth"
+      window.location.href = "/auth";
     }
-  }
+  };
 
   const checkUserLogin = () => {
-    const token = Cookies.get("sessionToken")
+    const token = Cookies.get("sessionToken");
     if (token) {
       try {
-        const decoded = JSON.parse(atob(token.split(".")[1]))
-        setUserId(decoded.id)
-        setUserRole(decoded.role || "user")
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        setUserId(decoded.id);
+        setUserRole(decoded.role || "user");
         if (decoded.name) {
-          setPoliceName(decoded.name)
+          setPoliceName(decoded.name);
         }
-        setIsLogin(true)
-        return true
+        setIsLogin(true);
+        return true;
       } catch (error) {
-        console.error("Error decoding token:", error)
-        setIsLogin(false)
-        return false
+        console.error("Error decoding token:", error);
+        setIsLogin(false);
+        return false;
       }
     } else {
-      setIsLogin(false)
-      return false
+      setIsLogin(false);
+      return false;
     }
-  }
+  };
 
   const fetchNotificationCount = async () => {
-    if (!isLogin) return
+    if (!isLogin) return;
 
     try {
-      const endpoint = userRole === "police" 
-        ? "/api/police/total-notification-count" 
-        : "/api/notifications/count"
-      
-      const response = await fetch(endpoint)
+      const endpoint =
+        userRole === "police"
+          ? "/api/police/total-notification-count"
+          : "/api/notifications/count";
+
+      const response = await fetch(endpoint);
       if (response.ok) {
-        const data = await response.json()
-        setNotificationCount(data.count)
+        const data = await response.json();
+        setNotificationCount(data.count);
       }
     } catch (error) {
-      console.error("Error fetching notification count:", error)
+      console.error("Error fetching notification count:", error);
     }
-  }
+  };
 
   const initializeSocket = () => {
     if (!socketRef.current && isLogin && userId) {
-      const socket = io()
+      const socket = io();
 
       socket.on("connect", () => {
-        socket.emit("authenticate", userId)
-      })
+        socket.emit("authenticate", userId);
+      });
 
       socket.on("notification", (data) => {
         if (data.userId === userId) {
           if (userRole === "police") {
-            fetchNotificationCount()
+            fetchNotificationCount();
           } else {
-            setNotificationCount((prev) => prev + 1)
+            setNotificationCount((prev) => prev + 1);
           }
         }
-      })
+      });
 
-      socketRef.current = socket
+      socketRef.current = socket;
     }
-  }
+  };
 
   const handleNotificationClick = () => {
-    if (!isLogin) return
-    
-    const notificationsPath = userRole === "police" 
-      ? "/police/notifications" 
-      : "/notifications"
-    
-    window.location.href = notificationsPath
-  }
+    if (!isLogin) return;
+
+    const notificationsPath =
+      userRole === "police" ? "/police/notifications" : "/notifications";
+
+    window.location.href = notificationsPath;
+  };
 
   useEffect(() => {
-    const isUserLoggedIn = checkUserLogin()
+    const isUserLoggedIn = checkUserLogin();
     if (isUserLoggedIn) {
-      fetchNotificationCount()
+      fetchNotificationCount();
     }
 
     return () => {
       if (socketRef.current) {
-        socketRef.current.disconnect()
-        socketRef.current = null
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
-    }
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
     if (isLogin && userId) {
-      initializeSocket()
+      initializeSocket();
     }
-  }, [isLogin, userId])
+  }, [isLogin, userId]);
 
   useEffect(() => {
     if (isLogin && userId) {
-      fetchNotificationCount()
+      fetchNotificationCount();
     }
-  }, [userRole, isLogin, userId])
+  }, [userRole, isLogin, userId]);
 
   useEffect(() => {
     const handleUpdateNotificationCount = (event: any) => {
-      setNotificationCount(event.detail.count)
-    }
+      setNotificationCount(event.detail.count);
+    };
 
-    window.addEventListener("updateNotificationCount", handleUpdateNotificationCount)
+    window.addEventListener(
+      "updateNotificationCount",
+      handleUpdateNotificationCount
+    );
 
     return () => {
-      window.removeEventListener("updateNotificationCount", handleUpdateNotificationCount)
-    }
-  }, [])
+      window.removeEventListener(
+        "updateNotificationCount",
+        handleUpdateNotificationCount
+      );
+    };
+  }, []);
 
   const value = {
     isLogin,
@@ -155,16 +168,18 @@ export function NavbarProvider({ children }: { children: ReactNode }) {
     handleLogout,
     handleNotificationClick,
     userRole,
-    policeName
-  }
+    policeName,
+  };
 
-  return <NavbarContext.Provider value={value}>{children}</NavbarContext.Provider>
+  return (
+    <NavbarContext.Provider value={value}>{children}</NavbarContext.Provider>
+  );
 }
 
 export function useNavbar() {
-  const context = useContext(NavbarContext)
+  const context = useContext(NavbarContext);
   if (context === undefined) {
-    throw new Error("useNavbar must be used within a NavbarProvider")
+    throw new Error("useNavbar must be used within a NavbarProvider");
   }
-  return context
+  return context;
 }

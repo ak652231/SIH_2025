@@ -57,7 +57,7 @@ const LocationPin: React.FC = () => {
       </div>
 
       <div className="absolute z-40 text-center pointer-events-none">
-        <h1 className="text-6xl font-bold text-black mb-2 text-balance ">
+        <h1 className="text-6xl font-extrabold text-black mb-2 text-balance ">
           Namaste Jharkhand
         </h1>
         <h2 className="text-4xl font-semibold text-black mb-8 text-balance">

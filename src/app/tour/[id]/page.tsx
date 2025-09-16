@@ -118,7 +118,7 @@ const TourDetailPage = ({ params }) => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
+      <div className="min-h-screen pt-20 flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200 border-t-emerald-600 mx-auto mb-4"></div>
           <p className="text-emerald-700 font-medium">
@@ -131,7 +131,7 @@ const TourDetailPage = ({ params }) => {
 
   if (!tour) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
+      <div className="min-h-screen pt-20 flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
         <div className="text-center max-w-md mx-auto px-6">
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-emerald-100">
             <User className="w-16 h-16 text-emerald-300 mx-auto mb-4" />

@@ -9,6 +9,7 @@ import Providers from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { Suspense } from "react"; // <-- 1. IMPORT SUSPENSE
 import { PageWrapper } from "@/components/chatbot/page-wrapper"; // <-- 2. IMPORT PAGEWRAPPER
+import Navbar from "@/components/navbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,10 @@ export default function RootLayout({
           {/* 3. WRAP YOUR EXISTING CONTENT WITH SUSPENSE AND PAGEWRAPPER */}
           <Suspense fallback={<div>Loading...</div>}>
             <PageWrapper>
-              <NavbarProvider>{children}</NavbarProvider>
+              <NavbarProvider>
+                <Navbar />
+                {children}
+              </NavbarProvider>
             </PageWrapper>
           </Suspense>
         </Providers>

@@ -375,7 +375,7 @@ const DashboardPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 flex items-center justify-center">
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
@@ -383,7 +383,7 @@ const DashboardPage = () => {
 
   if (!userData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 flex items-center justify-center">
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-emerald-600">Loading user data...</p>
         </div>
@@ -392,7 +392,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 relative overflow-hidden">
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full opacity-20 animate-pulse"></div>

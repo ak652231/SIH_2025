@@ -70,7 +70,9 @@ const AuthPage = () => {
   const fetchFromNominatim = async (query) => {
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query+" India")}&addressdetails=1&limit=5&countrycodes=in`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          query + " India"
+        )}&addressdetails=1&limit=5&countrycodes=in`,
         {
           headers: {
             "Accept-Language": "en",
@@ -338,7 +340,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 relative overflow-hidden">
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 relative overflow-hidden">
       {/* ... existing background elements ... */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full opacity-20 animate-pulse"></div>

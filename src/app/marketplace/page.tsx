@@ -1,76 +1,95 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { db } from "../../lib/firebase"
-import { Search, MapPin, Store, Utensils, Bed, ShoppingBag } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import {
+  Search,
+  MapPin,
+  Store,
+  Utensils,
+  Bed,
+  ShoppingBag,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import "leaflet/dist/leaflet.css";
 
 const MarketplacePage = () => {
-  const router = useRouter()
-  const [products, setProducts] = useState([])
-  const [filteredProducts, setFilteredProducts] = useState([])
-  const [activeFilter, setActiveFilter] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [userLocation, setUserLocation] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isLocationLoading, setIsLocationLoading] = useState(false)
+  const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [userLocation, setUserLocation] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
 
   // Haversine distance calculation
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371 // Radius of the Earth in kilometers
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLon = ((lon2 - lon1) * Math.PI) / 180
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    const distance = R * c // Distance in kilometers
-    return distance
-  }
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in kilometers
+    return distance;
+  };
 
   // Get user's current location
   const getCurrentLocation = () => {
-    setIsLocationLoading(true)
+    setIsLocationLoading(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, longitude } = position.coords
-          setUserLocation({ lat: latitude, lng: longitude })
-          setIsLocationLoading(false)
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          setIsLocationLoading(false);
         },
         (error) => {
-          console.error("Error getting location:", error)
+          console.error("Error getting location:", error);
           // Default to Ranchi, Jharkhand if location access denied
-          setUserLocation({ lat: 23.3441, lng: 85.3096 })
-          setIsLocationLoading(false)
-        },
-      )
+          setUserLocation({ lat: 23.3441, lng: 85.3096 });
+          setIsLocationLoading(false);
+        }
+      );
     } else {
       // Default to Ranchi, Jharkhand if geolocation not supported
-      setUserLocation({ lat: 23.3441, lng: 85.3096 })
-      setIsLocationLoading(false)
+      setUserLocation({ lat: 23.3441, lng: 85.3096 });
+      setIsLocationLoading(false);
     }
-  }
+  };
 
   // Fetch products from Firebase
   const fetchProducts = async () => {
     try {
-      const productsQuery = query(collection(db, "products"))
-      const querySnapshot = await getDocs(productsQuery)
-      const productsData = []
+      const productsQuery = query(collection(db, "products"));
+      const querySnapshot = await getDocs(productsQuery);
+      const productsData = [];
 
       for (const doc of querySnapshot.docs) {
-        const productData = doc.data()
+        const productData = doc.data();
 
         // Fetch merchant location data
-        const usersQuery = query(collection(db, "users"), where("uid", "==", productData.merchantId))
-        const userSnapshot = await getDocs(usersQuery)
+        const usersQuery = query(
+          collection(db, "users"),
+          where("uid", "==", productData.merchantId)
+        );
+        const userSnapshot = await getDocs(usersQuery);
 
         if (!userSnapshot.empty) {
-          const merchantData = userSnapshot.docs[0].data()
+          const merchantData = userSnapshot.docs[0].data();
           if (merchantData.lat && merchantData.lng && userLocation) {
-            const distance = calculateDistance(userLocation.lat, userLocation.lng, merchantData.lat, merchantData.lng)
+            const distance = calculateDistance(
+              userLocation.lat,
+              userLocation.lng,
+              merchantData.lat,
+              merchantData.lng
+            );
 
             // Only include products within 10km radius
             if (distance <= 10) {
@@ -84,77 +103,185 @@ const MarketplacePage = () => {
                   businessName: merchantData.businessName,
                 },
                 distance: distance,
-              })
+              });
             }
           }
         }
       }
 
       // Sort by distance (ascending)
-      productsData.sort((a, b) => a.distance - b.distance)
+      productsData.sort((a, b) => a.distance - b.distance);
 
-      setProducts(productsData)
-      setFilteredProducts(productsData)
+      setProducts(productsData);
+      setFilteredProducts(productsData);
     } catch (error) {
-      console.error("Error fetching products:", error)
+      console.error("Error fetching products:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // Filter products based on active filter and search query
   const filterProducts = () => {
-    let filtered = products
+    let filtered = products;
 
     // Apply category filter
     if (activeFilter !== "all") {
-      filtered = filtered.filter((product) => product.businessType === activeFilter)
+      filtered = filtered.filter(
+        (product) => product.businessType === activeFilter
+      );
     }
 
     // Apply search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(
         (product) =>
-          product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.description.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+          product.productName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
 
-    setFilteredProducts(filtered)
-  }
+    setFilteredProducts(filtered);
+  };
 
   // Get filter icon
   const getFilterIcon = (filter) => {
     switch (filter) {
       case "accommodation":
-        return <Bed className="w-4 h-4" />
+        return <Bed className="w-4 h-4" />;
       case "dining":
-        return <Utensils className="w-4 h-4" />
+        return <Utensils className="w-4 h-4" />;
       case "shopping":
-        return <ShoppingBag className="w-4 h-4" />
+        return <ShoppingBag className="w-4 h-4" />;
       default:
-        return <Store className="w-4 h-4" />
+        return <Store className="w-4 h-4" />;
     }
-  }
+  };
 
   // Handle product card click
   const handleProductClick = (productId) => {
-    router.push(`/marketplace/product/${productId}`)
-  }
+    router.push(`/marketplace/product/${productId}`);
+  };
 
   useEffect(() => {
-    getCurrentLocation()
-  }, [])
+    getCurrentLocation();
+  }, []);
 
   useEffect(() => {
     if (userLocation) {
-      fetchProducts()
+      fetchProducts();
     }
-  }, [userLocation])
+  }, [userLocation]);
 
   useEffect(() => {
-    filterProducts()
-  }, [activeFilter, searchQuery, products])
+    filterProducts();
+  }, [activeFilter, searchQuery, products]);
+
+  const MapComponent = ({ userLocation, shops }) => {
+    useEffect(() => {
+      if (!userLocation || !window.L) return;
+
+      // Initialize map
+      const map = window.L.map("map").setView(
+        [userLocation.lat, userLocation.lng],
+        13
+      );
+
+      // Add tile layer
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(map);
+
+      // Custom blue icon for user location
+      const userIcon = window.L.divIcon({
+        className: "custom-user-marker",
+        html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      });
+
+      // Custom red icon for shops
+      const shopIcon = window.L.divIcon({
+        className: "custom-shop-marker",
+        html: `<div class="w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-lg"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      });
+
+      // Add user location marker (blue)
+      window.L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
+        .addTo(map)
+        .bindPopup(
+          '<div class="text-sm font-medium text-blue-600">Your Location</div>'
+        );
+
+      // Add shop markers (red)
+      shops.forEach((shop) => {
+        if (shop.merchantLocation?.lat && shop.merchantLocation?.lng) {
+          window.L.marker(
+            [shop.merchantLocation.lat, shop.merchantLocation.lng],
+            { icon: shopIcon }
+          ).addTo(map).bindPopup(`
+              <div class="p-2 min-w-[200px]">
+                <div class="font-bold text-emerald-800 mb-1">${
+                  shop.merchantLocation.businessName
+                }</div>
+                <div class="text-sm text-emerald-600 mb-2">${
+                  shop.productName
+                }</div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold text-emerald-800">₹${
+                    shop.cost
+                  }</span>
+                  <span class="text-xs text-emerald-600">${shop.distance.toFixed(
+                    1
+                  )} km</span>
+                </div>
+              </div>
+            `);
+        }
+      });
+
+      // Cleanup function
+      return () => {
+        map.remove();
+      };
+    }, [userLocation, shops]);
+
+    return (
+      <div className="relative">
+        <div id="map" className="h-96 w-full rounded-lg"></div>
+        {/* Loading overlay */}
+        {!window.L && (
+          <div className="absolute inset-0 bg-emerald-50 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-2"></div>
+              <p className="text-sm text-emerald-600">Loading map...</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !window.L) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = () => {
+        // Force re-render after Leaflet loads
+        setIsLoading((prev) => (!prev ? prev : prev));
+      };
+      document.head.appendChild(script);
+    }
+  }, []);
 
   if (isLoading || isLocationLoading) {
     return (
@@ -162,17 +289,19 @@ const MarketplacePage = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
           <p className="text-emerald-600">
-            {isLocationLoading ? "Getting your location..." : "Loading marketplace..."}
+            {isLocationLoading
+              ? "Getting your location..."
+              : "Loading marketplace..."}
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
       {/* Navbar */}
-      <nav className="bg-white/80 backdrop-blur-sm border-b border-emerald-100 sticky top-0 z-50">
+      {/* <nav className="bg-white/80 backdrop-blur-sm border-b border-emerald-100 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -189,7 +318,7 @@ const MarketplacePage = () => {
             </button>
           </div>
         </div>
-      </nav>
+      </nav> */}
 
       <div className="container mx-auto px-4 py-6">
         {/* Search Bar */}
@@ -210,10 +339,26 @@ const MarketplacePage = () => {
         <div className="flex justify-center mb-8">
           <div className="flex gap-2 bg-white/80 backdrop-blur-sm rounded-full p-2 border border-emerald-100">
             {[
-              { key: "all", label: "All", icon: <Store className="w-4 h-4" /> },
-              { key: "accommodation", label: "Stay", icon: <Bed className="w-4 h-4" /> },
-              { key: "dining", label: "Dine", icon: <Utensils className="w-4 h-4" /> },
-              { key: "shopping", label: "Shop", icon: <ShoppingBag className="w-4 h-4" /> },
+              {
+                key: "all",
+                label: "All",
+                icon: <Store className="w-4 h-4" />,
+              },
+              {
+                key: "accommodation",
+                label: "Stay",
+                icon: <Bed className="w-4 h-4" />,
+              },
+              {
+                key: "dining",
+                label: "Dine",
+                icon: <Utensils className="w-4 h-4" />,
+              },
+              {
+                key: "shopping",
+                label: "Shop",
+                icon: <ShoppingBag className="w-4 h-4" />,
+              },
             ].map((filter) => (
               <button
                 key={filter.key}
@@ -232,10 +377,20 @@ const MarketplacePage = () => {
         </div>
 
         {/* Content Layout */}
-        <div className={`${activeFilter === "all" ? "block" : "grid grid-cols-1 lg:grid-cols-2 gap-6"}`}>
+        <div
+          className={`${
+            activeFilter === "all"
+              ? "block"
+              : "grid grid-cols-1 lg:grid-cols-2 gap-6"
+          }`}
+        >
           {/* Products Grid */}
           <div
-            className={`${activeFilter === "all" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "space-y-4"}`}
+            className={`${
+              activeFilter === "all"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                : "space-y-4"
+            }`}
           >
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
@@ -261,13 +416,19 @@ const MarketplacePage = () => {
 
                   {/* Product Info */}
                   <div className="p-4">
-                    <h3 className="font-bold text-emerald-800 text-lg mb-1 line-clamp-1">{product.productName}</h3>
+                    <h3 className="font-bold text-emerald-800 text-lg mb-1 line-clamp-1">
+                      {product.productName}
+                    </h3>
                     <p className="text-emerald-600 text-sm mb-2 font-medium">
                       {product.merchantLocation?.businessName}
                     </p>
-                    <p className="text-emerald-700 text-sm mb-3 line-clamp-2">{product.description}</p>
+                    <p className="text-emerald-700 text-sm mb-3 line-clamp-2">
+                      {product.description}
+                    </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-emerald-800 font-bold text-lg">₹{product.cost}</span>
+                      <span className="text-emerald-800 font-bold text-lg">
+                        ₹{product.cost}
+                      </span>
                       <div className="flex items-center gap-1 text-emerald-600 text-sm">
                         <MapPin className="w-4 h-4" />
                         {product.distance.toFixed(1)} km
@@ -279,9 +440,13 @@ const MarketplacePage = () => {
             ) : (
               <div className="col-span-full text-center py-12">
                 <Store className="w-16 h-16 text-emerald-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-emerald-700 mb-2">No products found</h3>
+                <h3 className="text-xl font-semibold text-emerald-700 mb-2">
+                  No products found
+                </h3>
                 <p className="text-emerald-600">
-                  {searchQuery ? "Try adjusting your search terms" : "No products available in your area"}
+                  {searchQuery
+                    ? "Try adjusting your search terms"
+                    : "No products available in your area"}
                 </p>
               </div>
             )}
@@ -291,36 +456,65 @@ const MarketplacePage = () => {
           {activeFilter !== "all" && (
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-emerald-100">
               <div className="p-4 border-b border-emerald-100">
-                <h3 className="font-bold text-emerald-800 flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Nearby Locations
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-emerald-800 flex items-center gap-2">
+                    <MapPin className="w-5 h-5" />
+                    Nearby Locations
+                  </h3>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full border border-white shadow-sm"></div>
+                      <span className="text-emerald-600">You</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-red-500 rounded-full border border-white shadow-sm"></div>
+                      <span className="text-emerald-600">Shops</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="h-96 relative">
-                {userLocation && (
-                  <iframe
-                    title="Marketplace Map"
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    scrolling="no"
-                    marginHeight="0"
-                    marginWidth="0"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${userLocation.lng - 0.05},${userLocation.lat - 0.05},${userLocation.lng + 0.05},${userLocation.lat + 0.05}&layer=mapnik&marker=${userLocation.lat},${userLocation.lng}`}
-                    style={{ border: "none" }}
-                  />
-                )}
-                {/* Map overlay with business locations */}
-                <div className="absolute top-4 left-4 right-4 max-h-32 overflow-y-auto">
-                  {filteredProducts.slice(0, 3).map((product, index) => (
+              <div className="p-4">
+                <MapComponent
+                  userLocation={userLocation}
+                  shops={filteredProducts}
+                />
+              </div>
+
+              {/* Shop List Below Map */}
+              <div className="p-4 border-t border-emerald-100 max-h-48 overflow-y-auto">
+                <h4 className="font-semibold text-emerald-800 mb-3 text-sm">
+                  {filteredProducts.length}{" "}
+                  {filteredProducts.length === 1 ? "shop" : "shops"} nearby
+                </h4>
+                <div className="space-y-2">
+                  {filteredProducts.slice(0, 5).map((product, index) => (
                     <div
                       key={product.id}
-                      className="bg-white/90 backdrop-blur-sm rounded-lg p-2 mb-2 border border-emerald-200 text-sm"
+                      onClick={() => handleProductClick(product.id)}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-emerald-50 cursor-pointer transition-colors border border-emerald-100"
                     >
-                      <div className="font-medium text-emerald-800">{product.merchantLocation?.businessName}</div>
-                      <div className="text-emerald-600 text-xs">{product.distance.toFixed(1)} km away</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-emerald-800 text-sm truncate">
+                          {product.merchantLocation?.businessName}
+                        </div>
+                        <div className="text-emerald-600 text-xs truncate">
+                          {product.productName}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-emerald-600 ml-2">
+                        <span className="font-semibold">₹{product.cost}</span>
+                        <span className="text-emerald-500">•</span>
+                        <span>{product.distance.toFixed(1)} km</span>
+                      </div>
                     </div>
                   ))}
+                  {filteredProducts.length > 5 && (
+                    <div className="text-center pt-2">
+                      <span className="text-xs text-emerald-500">
+                        +{filteredProducts.length - 5} more shops
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -328,7 +522,7 @@ const MarketplacePage = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default MarketplacePage
+export default MarketplacePage;
