@@ -1,35 +1,65 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Send, X, MapPin, Compass, Mountain, Waves, TreePine, Camera } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { TypingIndicator } from "./typing-indicator"
-import { SohraiPattern, KohbarPattern } from "./cultural-patterns"
+import { useState, useRef, useEffect } from "react";
+import {
+  Send,
+  X,
+  MapPin,
+  Compass,
+  Mountain,
+  Waves,
+  TreePine,
+  Camera,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { TypingIndicator } from "./typing-indicator";
+import { SohraiPattern, KohbarPattern } from "./cultural-patterns";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 interface Message {
-  id: string
-  content: string
-  isUser: boolean
-  timestamp: Date
+  id: string;
+  content: string;
+  isUser: boolean;
+  timestamp: Date;
 }
 
 interface TravelChatboxProps {
-  onClose: () => void
+  onClose: () => void;
 }
 
 const quickSuggestions = [
   { text: "Top waterfalls", icon: Waves, color: "from-blue-500 to-cyan-500" },
-  { text: "Best trekking spots", icon: Mountain, color: "from-green-600 to-emerald-600" },
-  { text: "Tribal festivals", icon: Compass, color: "from-orange-500 to-red-500" },
-  { text: "Local cuisines", icon: MapPin, color: "from-purple-500 to-pink-500" },
-  { text: "Wildlife sanctuaries", icon: TreePine, color: "from-green-500 to-teal-500" },
-  { text: "Photography spots", icon: Camera, color: "from-indigo-500 to-blue-500" },
-]
+  {
+    text: "Best trekking spots",
+    icon: Mountain,
+    color: "from-green-600 to-emerald-600",
+  },
+  {
+    text: "Tribal festivals",
+    icon: Compass,
+    color: "from-orange-500 to-red-500",
+  },
+  {
+    text: "Local cuisines",
+    icon: MapPin,
+    color: "from-purple-500 to-pink-500",
+  },
+  {
+    text: "Wildlife sanctuaries",
+    icon: TreePine,
+    color: "from-green-500 to-teal-500",
+  },
+  {
+    text: "Photography spots",
+    icon: Camera,
+    color: "from-indigo-500 to-blue-500",
+  },
+];
 
 export function TravelChatbox({ onClose }: TravelChatboxProps) {
   const [messages, setMessages] = useState<Message[]>([
@@ -40,38 +70,40 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
       isUser: false,
       timestamp: new Date(),
     },
-  ])
-  const [inputValue, setInputValue] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      );
       if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
-  }
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   const sendMessage = async (content: string) => {
-    if (!content.trim()) return
+    if (!content.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       content: content.trim(),
       isUser: true,
       timestamp: new Date(),
-    }
+    };
 
-    setMessages((prev) => [...prev, userMessage])
-    setInputValue("")
-    setIsTyping(true)
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setIsTyping(true);
 
     try {
       const response = await fetch("/api/chat", {
@@ -80,49 +112,52 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ message: content.trim() }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to get response")
+        throw new Error("Failed to get response");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.response || "I'm sorry, I couldn't process that request. Please try again.",
+        content:
+          data.response ||
+          "I'm sorry, I couldn't process that request. Please try again.",
         isUser: false,
         timestamp: new Date(),
-      }
+      };
 
       setTimeout(() => {
-        setMessages((prev) => [...prev, botMessage])
-        setIsTyping(false)
-      }, 1200) // Simulate realistic typing delay
+        setMessages((prev) => [...prev, botMessage]);
+        setIsTyping(false);
+      }, 1200); // Simulate realistic typing delay
     } catch (error) {
-      console.error("Chat error:", error)
+      console.error("Chat error:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I'm having trouble connecting right now. Please try again in a moment. 🔄",
+        content:
+          "I'm having trouble connecting right now. Please try again in a moment. 🔄",
         isUser: false,
         timestamp: new Date(),
-      }
+      };
 
       setTimeout(() => {
-        setMessages((prev) => [...prev, errorMessage])
-        setIsTyping(false)
-      }, 1000)
+        setMessages((prev) => [...prev, errorMessage]);
+        setIsTyping(false);
+      }, 1000);
     }
-  }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    sendMessage(inputValue)
-  }
+    e.preventDefault();
+    sendMessage(inputValue);
+  };
 
   const handleSuggestionClick = (suggestion: string) => {
-    sendMessage(suggestion)
-  }
+    sendMessage(suggestion);
+  };
 
   return (
     <div className="h-full bg-gradient-to-b from-emerald-50 via-teal-50 to-green-50 flex flex-col relative overflow-hidden">
@@ -144,7 +179,10 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
       <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white p-4 flex items-center justify-between relative z-10 shadow-lg">
         <div className="flex items-center space-x-3">
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
-            <Compass className="w-7 h-7 animate-spin" style={{ animationDuration: "8s" }} />
+            <Compass
+              className="w-7 h-7 animate-spin"
+              style={{ animationDuration: "8s" }}
+            />
           </div>
           <div>
             <h3 className="font-bold text-lg">Jharkhand Travel Guide</h3>
@@ -168,14 +206,20 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 relative z-10">
         <div className="space-y-4">
           {messages.map((message, index) => (
-            <div key={message.id} className={cn("flex", message.isUser ? "justify-end" : "justify-start")}>
+            <div
+              key={message.id}
+              className={cn(
+                "flex",
+                message.isUser ? "justify-end" : "justify-start"
+              )}
+            >
               <div
                 className={cn(
                   "max-w-[85%] rounded-2xl px-4 py-3 shadow-sm relative",
                   "animate-in slide-in-from-bottom-2 duration-300",
                   message.isUser
                     ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-br-md shadow-emerald-200"
-                    : "bg-white/90 backdrop-blur-sm text-gray-800 rounded-bl-md border border-emerald-100 shadow-lg",
+                    : "bg-white/90 backdrop-blur-sm text-gray-800 rounded-bl-md border border-emerald-100 shadow-lg"
                 )}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
@@ -185,9 +229,26 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
                 {message.isUser && (
                   <div className="absolute -right-2 top-3 w-4 h-4 bg-gradient-to-r from-emerald-600 to-teal-600 rotate-45"></div>
                 )}
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                <p className={cn("text-xs mt-2 opacity-70", message.isUser ? "text-emerald-100" : "text-gray-500")}>
-                  {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {message.isUser ? (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.content}
+                  </p>
+                ) : (
+                  <MarkdownRenderer
+                    content={message.content}
+                    className="text-sm leading-relaxed"
+                  />
+                )}
+                <p
+                  className={cn(
+                    "text-xs mt-2 opacity-70",
+                    message.isUser ? "text-emerald-100" : "text-gray-500"
+                  )}
+                >
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </div>
@@ -211,7 +272,7 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
         </p>
         <div className="grid grid-cols-2 gap-2">
           {quickSuggestions.map((suggestion, index) => {
-            const Icon = suggestion.icon
+            const Icon = suggestion.icon;
             return (
               <Button
                 key={index}
@@ -221,13 +282,13 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
                 className={cn(
                   "text-xs bg-gradient-to-r hover:scale-105 transition-all duration-200",
                   "border-emerald-200 text-emerald-800 hover:text-white shadow-sm",
-                  `hover:${suggestion.color}`,
+                  `hover:${suggestion.color}`
                 )}
               >
                 <Icon className="w-3 h-3 mr-1" />
                 {suggestion.text}
               </Button>
-            )
+            );
           })}
         </div>
       </div>
@@ -256,5 +317,5 @@ export function TravelChatbox({ onClose }: TravelChatboxProps) {
         </div>
       </form>
     </div>
-  )
+  );
 }

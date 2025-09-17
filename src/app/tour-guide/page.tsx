@@ -180,7 +180,7 @@ export default function ToursPage() {
                     {/* Price Badge */}
                     <div className="absolute top-3 right-3">
                       <Badge className="bg-white/90 text-emerald-900 font-bold">
-                        ${tour.pricePerPerson}/person
+                        ₹{tour.pricePerPerson}/person
                       </Badge>
                     </div>
                   </div>

@@ -131,8 +131,8 @@ const TourDetailPage = ({ params }) => {
 
   if (!tour) {
     return (
-      <div className="min-h-screen pt-20 flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
-        <div className="text-center max-w-md mx-auto px-6">
+      <div className="min-h-screen pt-10 flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
+        <div className="text-center max-w-md mx-auto px-6 ">
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-emerald-100">
             <User className="w-16 h-16 text-emerald-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-emerald-800 mb-3">
@@ -158,7 +158,7 @@ const TourDetailPage = ({ params }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100">
-      <div className="bg-white/90 backdrop-blur-md border-b border-emerald-200 sticky top-0 z-50 shadow-sm">
+      <div className="bg-white/90 h-20 backdrop-blur-md border-b border-emerald-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             onClick={() => router.push("/tour-guide")}
